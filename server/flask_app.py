@@ -1,6 +1,5 @@
 from flask import Flask, request, abort, jsonify
 import random
-import datetime
 import json
 
 BOARD_SIZE = 10

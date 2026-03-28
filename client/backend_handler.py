@@ -39,3 +39,7 @@ def make_move(code,userid, new_board, new_rack, new_bag, new_score):
 
 def end_game(code, is_quit):
     requests.post(URL + 'end_game',params={"code":code, "quit":str(is_quit)})
+def quit(code):
+    end_game(code, True)
+def game_over(code):
+    end_game(code, False)
