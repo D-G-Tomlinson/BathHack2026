@@ -8,22 +8,19 @@ import threading
 
 import pygame
 
-WIDTH, HEIGHT = 800, 600
 FPS = 60
 ASSETS = os.path.dirname(os.path.abspath(__file__))
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-BG = (240, 248, 255)
-PINK = (255, 182, 193)
-DARK_PINK = (210, 80, 120)
-GREEN = (60, 180, 100)
-RED = (210, 60, 60)
-YELLOW = (255, 220, 60)
-PURPLE = (160, 80, 210)
-GRAY = (160, 160, 160)
-PANEL = (255, 245, 250)
-BORDER = (200, 160, 180)
+BG = (174, 207, 223)
+GOLD = (229, 178, 93)
+TAN = (184, 125, 75)
+GREEN = (130, 210, 100)
+RED = (210, 85, 75)
+PURPLE = (176, 123, 172)
+GRAY = (180, 160, 140)
+CREAM = (250, 243, 220)
 
 # 0=Brown (title/playing), 1=White (correct), 2=Grey (wrong)
 CAT_FILES = [
@@ -77,19 +74,30 @@ WORDS = [
 
 TOTAL_ROUNDS = 5
 
+os.environ["SDL_RENDER_SCALE_QUALITY"] = "0"
 pygame.mixer.pre_init(44100, -16, 1, 512)
 pygame.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 pygame.display.set_caption("Meow Spelling!")
 clock = pygame.time.Clock()
 
-font_title = pygame.font.SysFont("Comic Sans MS", 56, bold=True)
-font_big   = pygame.font.SysFont("Comic Sans MS", 44, bold=True)
-font_med   = pygame.font.SysFont("Comic Sans MS", 32, bold=True)
-font_small = pygame.font.SysFont("Comic Sans MS", 24)
-font_input = pygame.font.SysFont("Comic Sans MS", 38, bold=True)
+W, H = screen.get_size()
+BASE_W, BASE_H = 800, 600
+_s  = min(W / BASE_W, H / BASE_H)
+_ox = (W - int(BASE_W * _s)) // 2
+_oy = (H - int(BASE_H * _s)) // 2
 
-CAT_SIZE = 180
+def sx(v): return int(v * _s)
+def px(v): return _ox + int(v * _s)
+def py(v): return _oy + int(v * _s)
+
+font_title = pygame.font.SysFont("Comic Sans MS", sx(56), bold=True)
+font_big   = pygame.font.SysFont("Comic Sans MS", sx(44), bold=True)
+font_med   = pygame.font.SysFont("Comic Sans MS", sx(32), bold=True)
+font_small = pygame.font.SysFont("Comic Sans MS", sx(24))
+font_input = pygame.font.SysFont("Comic Sans MS", sx(38), bold=True)
+
+CAT_SIZE = sx(180)
 
 def _scale_cat(path):
     img = pygame.image.load(path).convert_alpha()
@@ -116,27 +124,57 @@ SND_WRONG   = make_tone(220, 0.40)
 
 def speak(text: str):
     def _run():
-        subprocess.run(
-            ['powershell', '-Command',
-             f'Add-Type -AssemblyName System.Speech; '
-             f'(New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak("{text}")'],
-            creationflags=subprocess.CREATE_NO_WINDOW,
-        )
+        try:
+            import asyncio
+            import edge_tts
+            import tempfile
+
+            async def _tts():
+                comm = edge_tts.Communicate(text, "en-GB-SoniaNeural")
+                with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+                    path = f.name
+                await comm.save(path)
+                return path
+
+            path = asyncio.run(_tts())
+            subprocess.run(
+                ['powershell', '-NoProfile', '-Command',
+                 'Add-Type -AssemblyName PresentationCore; '
+                 '$mp = New-Object System.Windows.Media.MediaPlayer; '
+                 f'$mp.Open([Uri]"file:///{path.replace(chr(92), "/")}"); '
+                 '$mp.Play(); '
+                 'do { Start-Sleep -Milliseconds 100 } '
+                 'while (-not $mp.NaturalDuration.HasTimeSpan -or '
+                 '$mp.Position -lt $mp.NaturalDuration.TimeSpan); '
+                 '$mp.Close()'],
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            os.unlink(path)
+        except Exception:
+            subprocess.run(
+                ['powershell', '-NoProfile', '-Command',
+                 f'Add-Type -AssemblyName System.Speech; '
+                 f'$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; '
+                 f'$v = $s.GetInstalledVoices() | Where-Object {{ $_.VoiceInfo.Culture.Name -eq "en-GB" }} | Select-Object -First 1; '
+                 f'if ($v) {{ $s.SelectVoice($v.VoiceInfo.Name) }}; '
+                 f'$s.Speak("{text}")'],
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
     threading.Thread(target=_run, daemon=True).start()
 
 
 def draw_bg():
     screen.fill(BG)
-    for gx in range(60, WIDTH, 130):
-        for gy in range(60, HEIGHT, 130):
-            pygame.draw.circle(screen, PINK, (gx, gy), 6)
+    for gx in range(sx(60), W, sx(130)):
+        for gy in range(sx(60), H, sx(130)):
+            pygame.draw.circle(screen, GOLD, (gx, gy), sx(6))
 
 def blit_cat(index: int, cx: int, cy: int):
     surf = CAT_IMAGES[index]
     rect = surf.get_rect(center=(cx, cy))
-    card = rect.inflate(20, 20)
-    pygame.draw.rect(screen, WHITE, card, border_radius=18)
-    pygame.draw.rect(screen, BORDER, card, 2, border_radius=18)
+    card = rect.inflate(sx(20), sx(20))
+    pygame.draw.rect(screen, WHITE, card, border_radius=sx(18))
+    pygame.draw.rect(screen, TAN, card, 2, border_radius=sx(18))
     screen.blit(surf, rect)
 
 def draw_text(text: str, font, color, cx: int, cy: int):
@@ -145,35 +183,36 @@ def draw_text(text: str, font, color, cx: int, cy: int):
 
 def draw_button(rect: pygame.Rect, text: str, color, hover: bool = False):
     shade = tuple(max(0, c - 35) for c in color)
-    pygame.draw.rect(screen, shade if hover else color, rect, border_radius=14)
-    pygame.draw.rect(screen, BLACK, rect, 2, border_radius=14)
+    pygame.draw.rect(screen, shade if hover else color, rect, border_radius=sx(14))
+    pygame.draw.rect(screen, BLACK, rect, 2, border_radius=sx(14))
     draw_text(text, font_small, BLACK, rect.centerx, rect.centery)
 
 def draw_hearts(lives: int):
     for i in range(3):
-        c = DARK_PINK if i < lives else GRAY
-        cx = 700 + i * 32
-        pygame.draw.circle(screen, c, (cx, 28), 10)
+        c = TAN if i < lives else GRAY
+        cx = px(700) + i * sx(32)
+        pygame.draw.circle(screen, c, (cx, py(28)), sx(10))
 
 def draw_score_badge(score: int, total: int):
-    draw_text(f"Score: {score}/{total}", font_small, YELLOW, 90, 28)
+    draw_text(f"Score: {score}/{total}", font_small, GOLD, px(90), py(28))
 
 def draw_input_box(typed: str, active: bool, shake: int = 0):
-    bw, bh = 420, 64
-    bx = (WIDTH - bw) // 2 + (random.randint(-4, 4) if shake else 0)
-    by = 380
+    bw = sx(420)
+    bh = sx(64)
+    bx = (W - bw) // 2 + (random.randint(-sx(4), sx(4)) if shake else 0)
+    by = py(380)
     rect = pygame.Rect(bx, by, bw, bh)
-    pygame.draw.rect(screen, WHITE, rect, border_radius=12)
-    pygame.draw.rect(screen, DARK_PINK if active else BORDER, rect, 3, border_radius=12)
+    pygame.draw.rect(screen, WHITE, rect, border_radius=sx(12))
+    pygame.draw.rect(screen, TAN if active else TAN, rect, sx(3), border_radius=sx(12))
     surf = font_input.render(typed.upper(), True, BLACK)
     screen.blit(surf, surf.get_rect(center=rect.center))
     if active and (pygame.time.get_ticks() // 500) % 2 == 0:
-        cx = rect.centerx + surf.get_width() // 2 + 4
-        pygame.draw.line(screen, BLACK, (cx, by + 12), (cx, by + bh - 12), 2)
+        cx = rect.centerx + surf.get_width() // 2 + sx(4)
+        pygame.draw.line(screen, BLACK, (cx, by + sx(12)), (cx, by + bh - sx(12)), 2)
 
 
 def title_screen():
-    btn = pygame.Rect(300, 460, 200, 60)
+    btn = pygame.Rect(px(300), py(460), sx(200), sx(60))
     while True:
         mx, my = pygame.mouse.get_pos()
         for event in pygame.event.get():
@@ -185,16 +224,16 @@ def title_screen():
                 return
 
         draw_bg()
-        draw_text("Meow Spelling!", font_title, DARK_PINK, WIDTH // 2, 60)
-        draw_text("Read the clue and type the word!", font_small, BLACK, WIDTH // 2, 108)
-        blit_cat(0, WIDTH // 2, 300)
+        draw_text("Meow Spelling!", font_title, TAN, W // 2, py(60))
+        draw_text("Read the clue and type the word!", font_small, BLACK, W // 2, py(108))
+        blit_cat(0, W // 2, py(300))
         draw_button(btn, "Play!", GREEN, btn.collidepoint(mx, my))
         pygame.display.flip()
         clock.tick(FPS)
 
 
 def result_screen(correct: bool, word: str, hint: str):
-    btn = pygame.Rect(300, 490, 200, 60)
+    btn = pygame.Rect(px(300), py(490), sx(200), sx(60))
     cat_idx = 1 if correct else 2
     while True:
         mx, my = pygame.mouse.get_pos()
@@ -207,20 +246,20 @@ def result_screen(correct: bool, word: str, hint: str):
                 return
 
         draw_bg()
-        blit_cat(cat_idx, WIDTH // 2, 200)
+        blit_cat(cat_idx, W // 2, py(200))
         if correct:
-            draw_text("Purr-fect!", font_big, GREEN, WIDTH // 2, 370)
-            draw_text(f'"{word.upper()}" - {hint}', font_small, BLACK, WIDTH // 2, 418)
+            draw_text("Purr-fect!", font_big, GREEN, W // 2, py(370))
+            draw_text(f'"{word.upper()}" - {hint}', font_small, BLACK, W // 2, py(418))
         else:
-            draw_text("Oh no!", font_big, RED, WIDTH // 2, 370)
-            draw_text(f"The word was:  {word.upper()}", font_med, DARK_PINK, WIDTH // 2, 418)
-        draw_button(btn, "Next >>", YELLOW, btn.collidepoint(mx, my))
+            draw_text("Oh no!", font_big, RED, W // 2, py(370))
+            draw_text(f"The word was:  {word.upper()}", font_med, TAN, W // 2, py(418))
+        draw_button(btn, "Next >>", GOLD, btn.collidepoint(mx, my))
         pygame.display.flip()
         clock.tick(FPS)
 
 
 def end_screen(score: int, total: int):
-    btn = pygame.Rect(290, 490, 220, 60)
+    btn = pygame.Rect(px(290), py(490), sx(220), sx(60))
     cat_idx = 1 if score >= total // 2 else 2
     while True:
         mx, my = pygame.mouse.get_pos()
@@ -233,17 +272,17 @@ def end_screen(score: int, total: int):
                 return
 
         draw_bg()
-        blit_cat(cat_idx, WIDTH // 2, 200)
-        draw_text("Game Over!", font_big, PURPLE, WIDTH // 2, 370)
-        draw_text(f"You got  {score} / {total}  right!", font_med, BLACK, WIDTH // 2, 418)
+        blit_cat(cat_idx, W // 2, py(200))
+        draw_text("Game Over!", font_big, PURPLE, W // 2, py(370))
+        draw_text(f"You got  {score} / {total}  right!", font_med, BLACK, W // 2, py(418))
         if score == total:
             msg, col = "Amazing! You're a spelling cat!", GREEN
         elif score >= total // 2:
-            msg, col = "Good job! Keep practising!", YELLOW
+            msg, col = "Good job! Keep practising!", GOLD
         else:
             msg, col = "Keep trying, you can do it!", RED
-        draw_text(msg, font_small, col, WIDTH // 2, 456)
-        draw_button(btn, "Play Again", PINK, btn.collidepoint(mx, my))
+        draw_text(msg, font_small, col, W // 2, py(456))
+        draw_button(btn, "Exit", GOLD, btn.collidepoint(mx, my))
         pygame.display.flip()
         clock.tick(FPS)
 
@@ -288,23 +327,23 @@ def play_round(word: str, hint: str, score: int, round_num: int, lives: int):
         draw_bg()
         draw_hearts(lives)
         draw_score_badge(score, TOTAL_ROUNDS)
-        draw_text(f"Round {round_num} of {TOTAL_ROUNDS}", font_small, BLACK, WIDTH // 2, 28)
+        draw_text(f"Round {round_num} of {TOTAL_ROUNDS}", font_small, BLACK, W // 2, py(28))
 
-        blit_cat(0, WIDTH // 2, 195)
+        blit_cat(0, W // 2, py(195))
 
-        hint_rect = pygame.Rect(160, 315, 480, 50)
-        pygame.draw.rect(screen, PANEL,  hint_rect, border_radius=10)
-        pygame.draw.rect(screen, BORDER, hint_rect, 2, border_radius=10)
-        draw_text(hint, font_small, DARK_PINK, WIDTH // 2, 340)
+        hint_rect = pygame.Rect(px(160), py(315), sx(480), sx(50))
+        pygame.draw.rect(screen, CREAM,  hint_rect, border_radius=sx(10))
+        pygame.draw.rect(screen, TAN, hint_rect, 2, border_radius=sx(10))
+        draw_text(hint, font_small, TAN, W // 2, py(340))
 
         draw_input_box(typed, True, shake if shake > 0 else 0)
         if shake > 0:
             shake -= 1
 
-        draw_text("Type the word and press  Enter", font_small, GRAY, WIDTH // 2, 462)
+        draw_text("Type the word and press  Enter", font_small, GRAY, W // 2, py(462))
 
         if msg_timer > 0:
-            draw_text(message, font_med, msg_col, WIDTH // 2, 500)
+            draw_text(message, font_med, msg_col, W // 2, py(500))
             msg_timer -= 1
 
         pygame.display.flip()
@@ -312,18 +351,19 @@ def play_round(word: str, hint: str, score: int, round_num: int, lives: int):
 
 
 def main():
-    while True:
-        title_screen()
-        score = 0
-        lives = 3
-        pool = random.sample(WORDS, min(TOTAL_ROUNDS, len(WORDS)))
-        for i, (word, hint) in enumerate(pool, 1):
-            correct, lives = play_round(word, hint, score, i, lives)
-            if correct:
-                score += 1
-            if lives == 0:
-                break
-        end_screen(score, TOTAL_ROUNDS)
+    title_screen()
+    score = 0
+    lives = 3
+    pool = random.sample(WORDS, min(TOTAL_ROUNDS, len(WORDS)))
+    for i, (word, hint) in enumerate(pool, 1):
+        correct, lives = play_round(word, hint, score, i, lives)
+        if correct:
+            score += 1
+        if lives == 0:
+            break
+    end_screen(score, TOTAL_ROUNDS)
+    pygame.quit()
+    sys.exit()
 
 if __name__ == "__main__":
     main()

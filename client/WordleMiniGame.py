@@ -2,35 +2,49 @@ import pygame
 import random
 import os
 
+os.environ["SDL_RENDER_SCALE_QUALITY"] = "0"
 pygame.init()
 
-SCREEN_W, SCREEN_H = 520, 870
-TILE_SIZE = 62
-TILE_GAP = 8
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+pygame.display.set_caption("CatWordle - Guess the cat word!")
+
+W, H = screen.get_size()
+BASE_W, BASE_H = 520, 870
+_s  = min(W / BASE_W, H / BASE_H)
+_ox = (W - int(BASE_W * _s)) // 2
+_oy = (H - int(BASE_H * _s)) // 2
+
+def sx(v): return int(v * _s)
+def px(v): return _ox + int(v * _s)
+def py(v): return _oy + int(v * _s)
+
 GRID_COLS = 5
 GRID_ROWS = 8
-GRID_X = (SCREEN_W - (GRID_COLS * (TILE_SIZE + TILE_GAP) - TILE_GAP)) // 2
-GRID_Y = 110
+
+TILE_SIZE = sx(62)
+TILE_GAP  = sx(8)
+GRID_X    = (W - (GRID_COLS * (TILE_SIZE + TILE_GAP) - TILE_GAP)) // 2
+GRID_Y    = py(110)
 
 KEY_ROWS = [
     list("QWERTYUIOP"),
     list("ASDFGHJKL"),
     list("ZXCVBNM"),
 ]
-KEY_SIZE = 38
-KEY_GAP = 6
-KEY_Y_START = GRID_Y + GRID_ROWS * (TILE_SIZE + TILE_GAP) + 20
+KEY_SIZE    = sx(38)
+KEY_GAP     = sx(6)
+KEY_Y_START = GRID_Y + GRID_ROWS * (TILE_SIZE + TILE_GAP) + sx(20)
 
-WHITE = (255, 255, 255)
-BLACK = (20, 20, 20)
-GRAY_BG = (174, 207, 223)
+WHITE     = (255, 255, 255)
+BLACK     = (20, 20, 20)
+GRAY_BG   = (174, 207, 223)
 TILE_EMPTY = (255, 255, 255)
-TILE_EDGE = (184, 125, 75)
-GREEN = (181, 231, 137)
-YELLOW = (229, 178, 93)
-DARK_GRAY = (184, 125, 75)
-KEY_BG = (176, 123, 172)
-TEXT_DARK = (30, 30, 30)
+TILE_EDGE  = (184, 125, 75)
+GREEN      = (130, 210, 100)
+YELLOW     = (229, 178, 93)
+DARK_GRAY  = (184, 125, 75)
+KEY_BG     = (176, 123, 172)
+TEXT_DARK  = (30, 30, 30)
 TEXT_LIGHT = (255, 255, 255)
 
 CAT_WORDS = [
@@ -44,14 +58,11 @@ dic_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dic.txt")
 with open(dic_path) as f:
     VALID_WORDS = {w.strip().upper() for w in f if len(w.strip()) == 5} | set(CAT_WORDS)
 
-screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), pygame.FULLSCREEN | pygame.SCALED)
-pygame.display.set_caption("CatWordle - Guess the cat word!")
-
-font_large = pygame.font.SysFont("segoeui", 32, bold=True)
-font_tile  = pygame.font.SysFont("segoeui", 36, bold=True)
-font_key   = pygame.font.SysFont("segoeui", 18, bold=True)
-font_msg   = pygame.font.SysFont("segoeui", 26, bold=True)
-font_title = pygame.font.SysFont("segoeui", 42, bold=True)
+font_large = pygame.font.SysFont("Comic Sans MS", sx(32), bold=True)
+font_tile  = pygame.font.SysFont("Comic Sans MS", sx(36), bold=True)
+font_key   = pygame.font.SysFont("Comic Sans MS", sx(18), bold=True)
+font_msg   = pygame.font.SysFont("Comic Sans MS", sx(26), bold=True)
+font_title = pygame.font.SysFont("Comic Sans MS", sx(42), bold=True)
 
 
 def new_game():
@@ -88,13 +99,15 @@ def score_guess(guess, word):
     return result
 
 
-def draw_tile(surface, letter, color_bg, x, y, size=TILE_SIZE, border=TILE_EDGE, reveal=True):
+def draw_tile(surface, letter, color_bg, x, y, size=None, border=TILE_EDGE, reveal=True):
+    if size is None:
+        size = TILE_SIZE
     rect = pygame.Rect(x, y, size, size)
     if reveal and color_bg not in (TILE_EMPTY, None):
-        pygame.draw.rect(surface, color_bg, rect, border_radius=6)
+        pygame.draw.rect(surface, color_bg, rect, border_radius=sx(6))
     else:
-        pygame.draw.rect(surface, TILE_EMPTY, rect, border_radius=6)
-        pygame.draw.rect(surface, border, rect, 3, border_radius=6)
+        pygame.draw.rect(surface, TILE_EMPTY, rect, border_radius=sx(6))
+        pygame.draw.rect(surface, border, rect, sx(3), border_radius=sx(6))
 
     if letter:
         text_color = TEXT_LIGHT if (reveal and color_bg == DARK_GRAY) else TEXT_DARK
@@ -122,14 +135,14 @@ def draw_grid(surface, game):
 def draw_keyboard(surface, game):
     for row_idx, row_keys in enumerate(KEY_ROWS):
         total_w = len(row_keys) * (KEY_SIZE + KEY_GAP) - KEY_GAP
-        start_x = (SCREEN_W - total_w) // 2
+        start_x = (W - total_w) // 2
         y = KEY_Y_START + row_idx * (KEY_SIZE + KEY_GAP)
 
         for ki, key in enumerate(row_keys):
             x = start_x + ki * (KEY_SIZE + KEY_GAP)
             rect = pygame.Rect(x, y, KEY_SIZE, KEY_SIZE)
             color = game["key_colors"].get(key, KEY_BG)
-            pygame.draw.rect(surface, color, rect, border_radius=5)
+            pygame.draw.rect(surface, color, rect, border_radius=sx(5))
             text_color = TEXT_LIGHT if color in (DARK_GRAY, KEY_BG) else TEXT_DARK
             surf = font_key.render(key, True, text_color)
             surface.blit(surf, surf.get_rect(center=rect.center))
@@ -182,21 +195,21 @@ def draw(surface, game):
     surface.fill(GRAY_BG)
 
     title = font_title.render("CatWordle", True, BLACK)
-    surface.blit(title, title.get_rect(centerx=SCREEN_W // 2, y=14))
+    surface.blit(title, title.get_rect(centerx=W // 2, y=py(14)))
 
     hint_surf = font_msg.render(game["hint"], True, BLACK)
-    surface.blit(hint_surf, hint_surf.get_rect(centerx=SCREEN_W // 2, y=68))
+    surface.blit(hint_surf, hint_surf.get_rect(centerx=W // 2, y=py(68)))
 
     draw_grid(surface, game)
     draw_keyboard(surface, game)
 
     if game["message"]:
         msg_surf = font_msg.render(game["message"], True, BLACK)
-        surface.blit(msg_surf, msg_surf.get_rect(centerx=SCREEN_W // 2, y=SCREEN_H - 50))
+        surface.blit(msg_surf, msg_surf.get_rect(centerx=W // 2, y=H - sx(50)))
 
     if game["state"] != "playing":
         hint = font_key.render("Press ENTER or R to play again", True, DARK_GRAY)
-        surface.blit(hint, hint.get_rect(centerx=SCREEN_W // 2, y=SCREEN_H - 28))
+        surface.blit(hint, hint.get_rect(centerx=W // 2, y=H - sx(28)))
 
     pygame.display.flip()
 

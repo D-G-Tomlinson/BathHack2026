@@ -1,36 +1,47 @@
+import os
 import pygame
 import random
 import sys
 import math
 from collections import Counter
 
+os.environ["SDL_RENDER_SCALE_QUALITY"] = "0"
 pygame.init()
 
-WIDTH, HEIGHT = 800, 650
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 pygame.display.set_caption("Cat Connections")
 
+W, H = screen.get_size()
+BASE_W, BASE_H = 800, 650
+_s  = min(W / BASE_W, H / BASE_H)
+_ox = (W - int(BASE_W * _s)) // 2
+_oy = (H - int(BASE_H * _s)) // 2
+
+def sx(v): return int(v * _s)
+def px(v): return _ox + int(v * _s)
+def py(v): return _oy + int(v * _s)
+
 # Fonts
-font_title  = pygame.font.SysFont("segoeui", 34, bold=True)
-font_sub    = pygame.font.SysFont("segoeui", 15)
-font_word   = pygame.font.SysFont("segoeui", 17, bold=True)
-font_word_sm = pygame.font.SysFont("segoeui", 13, bold=True)
-font_cat    = pygame.font.SysFont("segoeui", 14, bold=True)
-font_ui     = pygame.font.SysFont("segoeui", 14)
-font_msg    = pygame.font.SysFont("segoeui", 19, bold=True)
-font_btn    = pygame.font.SysFont("segoeui", 15, bold=True)
+font_title   = pygame.font.SysFont("Comic Sans MS", sx(34), bold=True)
+font_sub     = pygame.font.SysFont("Comic Sans MS", sx(15))
+font_word    = pygame.font.SysFont("Comic Sans MS", sx(17), bold=True)
+font_word_sm = pygame.font.SysFont("Comic Sans MS", sx(13), bold=True)
+font_cat     = pygame.font.SysFont("Comic Sans MS", sx(14), bold=True)
+font_ui      = pygame.font.SysFont("Comic Sans MS", sx(14))
+font_msg     = pygame.font.SysFont("Comic Sans MS", sx(19), bold=True)
+font_btn     = pygame.font.SysFont("Comic Sans MS", sx(15), bold=True)
 
 # Colors
-BG          = (250, 248, 245)
+BG          = (174, 207, 223)   # AECFDF
 WHITE       = (255, 255, 255)
 BLACK       = ( 10,  10,  10)
-LIGHT_GRAY  = (240, 240, 235)
-GRAY        = (200, 200, 195)
-DARK        = ( 58,  58,  58)
-TILE_UNSEL  = (239, 239, 230)
-TILE_SEL    = ( 90,  89,  78)
-TILE_SEL_T  = (255, 255, 255)
-TILE_UNSEL_T = (10,  10,  10)
+LIGHT_GRAY  = (250, 243, 220)   # cream
+GRAY        = (200, 170, 130)   # warm mid
+DARK        = (140,  80,  35)   # B87D4B-ish
+TILE_UNSEL  = (250, 243, 220)   # cream
+TILE_SEL    = (184, 125,  75)   # B87D4B brown
+TILE_SEL_T  = (255, 250, 240)
+TILE_UNSEL_T = (55,  30,   8)
 
 CAT_COLORS = [
     (229, 178,  93),   # E5B25D - easy
@@ -56,12 +67,12 @@ PUZZLES = [
             },
             {
                 "name": "Cat Breeds",
-                "words": ["SIAMESE", "BENGAL", "PERSIAN", "BURMESE"],
+                "words": ["SIAMESE", "BENGAL", "PERSIAN", "RAGDOLL"],
                 "difficulty": 1,
             },
             {
-                "name": "Cat Behaviours",
-                "words": ["KNEADING", "LOAFING", "ZOOMIES", "BUNTING"],
+                "name": "Things Cats Do",
+                "words": ["SLEEPING", "PLAYING", "ZOOMIES", "GROOMING"],
                 "difficulty": 2,
             },
             {
@@ -81,17 +92,17 @@ PUZZLES = [
             },
             {
                 "name": "Things Cats Love",
-                "words": ["CATNIP", "TUNA", "KIBBLE", "TREATS"],
+                "words": ["CATNIP", "TUNA", "MILK", "TREATS"],
                 "difficulty": 1,
             },
             {
                 "name": "Cat Coat Patterns",
-                "words": ["CALICO", "TUXEDO", "TABBY", "TORTOISESHELL"],
+                "words": ["CALICO", "TUXEDO", "TABBY", "SPOTTED"],
                 "difficulty": 2,
             },
             {
                 "name": "Famous Fictional Cats",
-                "words": ["CHESHIRE", "CROOKSHANKS", "DUCHESS", "BINX"],
+                "words": ["CHESHIRE", "DUCHESS", "FIGARO", "PUSS"],
                 "difficulty": 3,
             },
         ],
@@ -100,13 +111,13 @@ PUZZLES = [
         "title": "Puzzle 3 - Cat Culture",
         "categories": [
             {
-                "name": "___ Cat (Internet Meme)",
-                "words": ["NYAN", "GRUMPY", "KEYBOARD", "CEILING"],
+                "name": "Cat Colours",
+                "words": ["GINGER", "WHITE", "BLACK", "GREY"],
                 "difficulty": 0,
             },
             {
-                "name": "Unusual Cat Breeds",
-                "words": ["SPHYNX", "MUNCHKIN", "RAGDOLL", "ABYSSINIAN"],
+                "name": "Cute Cat Breeds",
+                "words": ["PERSIAN", "RAGDOLL", "MUNCHKIN", "SCOTTISH"],
                 "difficulty": 1,
             },
             {
@@ -115,8 +126,8 @@ PUZZLES = [
                 "difficulty": 2,
             },
             {
-                "name": "Cat in Other Languages",
-                "words": ["NEKO", "CHAT", "GATO", "KATZE"],
+                "name": "Where Cats Nap",
+                "words": ["SOFA", "BED", "BOX", "LAP"],
                 "difficulty": 3,
             },
         ],
@@ -124,14 +135,14 @@ PUZZLES = [
 ]
 
 # Grid layout constants
-TILE_W   = 170
-TILE_H   = 58
-TILE_GAP = 10
+TILE_W   = sx(170)
+TILE_H   = sx(58)
+TILE_GAP = sx(10)
 COLS     = 4
-BAR_W    = TILE_W * COLS + TILE_GAP * (COLS - 1)   # 710 px
-GRID_X   = (WIDTH - BAR_W) // 2                      # 45 px
-GRID_Y   = 85
-ROW_H    = TILE_H + TILE_GAP                         # 68 px
+BAR_W    = TILE_W * COLS + TILE_GAP * (COLS - 1)
+GRID_X   = (W - BAR_W) // 2
+GRID_Y   = py(100)
+ROW_H    = TILE_H + TILE_GAP
 
 
 def rounded_rect(surf, color, rect, r=8, border=0, bcol=None):
@@ -145,8 +156,8 @@ def draw_btn(surf, label, rect, bg, fg, hover_bg=None, active=True):
     if not active:
         col = LIGHT_GRAY
         fg  = GRAY
-    rounded_rect(surf, col, rect, r=8)
-    rounded_rect(surf, DARK if active else GRAY, rect, r=8, border=2, bcol=DARK if active else GRAY)
+    rounded_rect(surf, col, rect, r=sx(8))
+    rounded_rect(surf, DARK if active else GRAY, rect, r=sx(8), border=sx(2), bcol=DARK if active else GRAY)
     t = font_btn.render(label, True, fg)
     surf.blit(t, (rect.x + (rect.w - t.get_width()) // 2,
                   rect.y + (rect.h - t.get_height()) // 2))
@@ -171,9 +182,10 @@ class Game:
             for w in cat["words"]:
                 self.words.append({"text": w, "cat": ci, "solved": False})
         random.shuffle(self.words)
-        self.selected  = set()
-        self.solved    = []    # solved category dicts in order solved
-        self.mistakes  = 4
+        self.selected   = set()
+        self.solved     = []    # solved category dicts in order solved
+        self.mistakes   = 6
+        self.hints_left = 2
         self.msg       = ""
         self.msg_color = BLACK
         self.msg_timer = 0
@@ -218,11 +230,11 @@ class Game:
             if max(Counter(cats_in_sel).values()) == 3:
                 self.set_msg("So close - one away!", (200, 120, 50))
             else:
-                self.set_msg(f"Not quite! {self.mistakes} mistake(s) left.", (180, 60, 60))
+                self.set_msg(f"Not quite! {self.mistakes} tries left.", (180, 60, 60))
             self.shake = 25
             if self.mistakes <= 0:
                 self.state = "lost"
-                self.set_msg("Game over! Better luck next time.", (180, 60, 60))
+                self.set_msg("Game over! Give it another try!", (180, 60, 60))
 
     def set_msg(self, m, col=None):
         self.msg       = m
@@ -238,17 +250,28 @@ class Game:
     def deselect_all(self):
         self.selected = set()
 
+    def use_hint(self):
+        if self.hints_left <= 0:
+            self.set_msg("No hints left!", (180, 60, 60))
+            return
+        solved_names = {c["name"] for c in self.solved}
+        unsolved_cats = [cat for cat in self.cats if cat["name"] not in solved_names]
+        if unsolved_cats:
+            cat = random.choice(unsolved_cats)
+            self.hints_left -= 1
+            self.set_msg(f'Hint: Find "{cat["name"]}"', CAT_COLORS[cat["difficulty"]])
+
 
 def draw_mistake_pips(surf, mistakes, cx, y):
     """Draw small filled/empty circles indicating remaining mistakes."""
-    pip_r   = 7
-    spacing = 22
-    total_w = 4 * spacing
-    sx = cx - total_w // 2
-    for i in range(4):
-        col = (80, 80, 80) if i < mistakes else (210, 210, 205)
-        pygame.draw.circle(surf, col, (sx + i * spacing + pip_r, y + pip_r), pip_r)
-        pygame.draw.circle(surf, DARK, (sx + i * spacing + pip_r, y + pip_r), pip_r, 2)
+    pip_r   = sx(6)
+    spacing = sx(18)
+    total_w = 6 * spacing
+    start_x = cx - total_w // 2
+    for i in range(6):
+        col = (176, 123, 172) if i < mistakes else (210, 190, 170)
+        pygame.draw.circle(surf, col, (start_x + i * spacing + pip_r, y + pip_r), pip_r)
+        pygame.draw.circle(surf, DARK, (start_x + i * spacing + pip_r, y + pip_r), pip_r, 2)
 
 
 def main():
@@ -259,10 +282,13 @@ def main():
         clock.tick(60)
 
         # Button rects (constant layout below the 4-row grid)
-        btn_y    = GRID_Y + 4 * ROW_H + 18   # y = 375
-        btn_sub  = pygame.Rect(WIDTH // 2 - 65,  btn_y,      130, 40)
-        btn_shuf = pygame.Rect(WIDTH // 2 - 215, btn_y,      130, 40)
-        btn_des  = pygame.Rect(WIDTH // 2 + 85,  btn_y,      130, 40)
+        btn_y    = GRID_Y + 4 * ROW_H + sx(18)
+        btn_w    = sx(100)
+        btn_h    = sx(40)
+        btn_shuf = pygame.Rect(W // 2 - sx(215), btn_y, btn_w, btn_h)
+        btn_des  = pygame.Rect(W // 2 - sx(105), btn_y, btn_w, btn_h)
+        btn_hint = pygame.Rect(W // 2 + sx(5),   btn_y, btn_w, btn_h)
+        btn_sub  = pygame.Rect(W // 2 + sx(115), btn_y, btn_w, btn_h)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -283,6 +309,8 @@ def main():
                         game.shuffle()
                     if btn_des.collidepoint(mx, my):
                         game.deselect_all()
+                    if btn_hint.collidepoint(mx, my):
+                        game.use_hint()
 
 
         if game.msg_timer > 0:
@@ -293,33 +321,34 @@ def main():
         screen.fill(BG)
 
         t = font_title.render("Cat Connections", True, BLACK)
-        screen.blit(t, (WIDTH // 2 - t.get_width() // 2, 10))
+        screen.blit(t, (W // 2 - t.get_width() // 2, py(10)))
 
         t = font_sub.render(game.title, True, DARK)
-        screen.blit(t, (WIDTH // 2 - t.get_width() // 2, 52))
+        screen.blit(t, (W // 2 - t.get_width() // 2, py(56)))
 
-        draw_mistake_pips(screen, game.mistakes, WIDTH // 2 + 180, 48)
+        pip_cx = px(740)
         lbl = font_sub.render("Mistakes:", True, DARK)
-        screen.blit(lbl, (WIDTH // 2 + 88, 52))
+        screen.blit(lbl, (pip_cx - sx(44) - sx(8) - lbl.get_width(), py(56)))
+        draw_mistake_pips(screen, game.mistakes, pip_cx, py(52))
 
         for i, cat in enumerate(game.solved):
             bar  = pygame.Rect(GRID_X, GRID_Y + i * ROW_H, BAR_W, TILE_H)
             diff = cat["difficulty"]
-            rounded_rect(screen, CAT_COLORS[diff], bar, r=8)
+            rounded_rect(screen, CAT_COLORS[diff], bar, r=sx(8))
             nt = font_cat.render(cat["name"].upper(), True, CAT_TEXT[diff])
-            screen.blit(nt, (bar.x + (bar.w - nt.get_width()) // 2, bar.y + 8))
+            screen.blit(nt, (bar.x + (bar.w - nt.get_width()) // 2, bar.y + sx(8)))
             wt = font_ui.render("  ".join(cat["words"]), True, CAT_TEXT[diff])
-            screen.blit(wt, (bar.x + (bar.w - wt.get_width()) // 2, bar.y + 30))
+            screen.blit(wt, (bar.x + (bar.w - wt.get_width()) // 2, bar.y + sx(30)))
 
         uns     = game.unsolved()
-        shake_x = int(math.sin(game.shake * 0.9) * 6) if game.shake > 0 else 0
+        shake_x = int(math.sin(game.shake * 0.9) * sx(6)) if game.shake > 0 else 0
 
         for i, w in enumerate(uns):
             row, col = divmod(i, COLS)
-            sx  = shake_x if i in game.selected else 0
-            r   = tile_rect(row, col, len(game.solved), sx)
+            tile_sx  = shake_x if i in game.selected else 0
+            r   = tile_rect(row, col, len(game.solved), tile_sx)
             sel = i in game.selected
-            rounded_rect(screen, TILE_SEL if sel else TILE_UNSEL, r, r=8)
+            rounded_rect(screen, TILE_SEL if sel else TILE_UNSEL, r, r=sx(8))
             f = font_word_sm if len(w["text"]) > 10 else font_word
             t = f.render(w["text"], True, TILE_SEL_T if sel else TILE_UNSEL_T)
             screen.blit(t, (r.x + (r.w - t.get_width()) // 2,
@@ -327,16 +356,22 @@ def main():
 
         if game.msg and game.msg_timer > 0:
             t = font_msg.render(game.msg, True, game.msg_color)
-            screen.blit(t, (WIDTH // 2 - t.get_width() // 2, btn_y - 33))
+            screen.blit(t, (W // 2 - t.get_width() // 2, btn_y - sx(33)))
 
         if game.state == "playing":
             draw_btn(screen, "Shuffle",      btn_shuf, LIGHT_GRAY, BLACK, hover_bg=GRAY)
             draw_btn(screen, "Deselect All", btn_des,  LIGHT_GRAY, BLACK, hover_bg=GRAY)
+            can_hint = game.hints_left > 0
+            draw_btn(screen, f"Hint ({game.hints_left})", btn_hint,
+                     (174, 207, 223) if can_hint else LIGHT_GRAY,
+                     BLACK          if can_hint else GRAY,
+                     hover_bg=(140, 180, 200) if can_hint else None,
+                     active=can_hint)
             can_sub = len(game.selected) == 4
             draw_btn(screen, "Submit", btn_sub,
-                     (70, 70, 70) if can_sub else LIGHT_GRAY,
-                     WHITE       if can_sub else GRAY,
-                     hover_bg=(100, 100, 100) if can_sub else None,
+                     (176, 123, 172) if can_sub else LIGHT_GRAY,
+                     WHITE          if can_sub else GRAY,
+                     hover_bg=(150, 100, 148) if can_sub else None,
                      active=can_sub)
 
 

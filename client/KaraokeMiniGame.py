@@ -159,6 +159,7 @@ def run(screen, clock):
 
 def launch():
     """Run the karaoke mini-game as a standalone window."""
+    os.environ["SDL_RENDER_SCALE_QUALITY"] = "0"
     pygame.init()
     screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     pygame.display.set_caption("Karaoke Mini Game")
