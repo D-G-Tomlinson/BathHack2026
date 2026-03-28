@@ -173,7 +173,10 @@ def end_screen(game):
         pygame.draw.rect(screen, TILE_EDGE,  (card_x, card_y, card_w, card_h), sx(2), border_radius=sx(14))
 
         msg_col = GREEN if won else (180, 60, 60)
-        t = font_large.render(game["message"], True, msg_col)
+        for f in (font_large, font_msg, font_key):
+            t = f.render(game["message"], True, msg_col)
+            if t.get_width() <= card_w - sx(20):
+                break
         screen.blit(t, (W // 2 - t.get_width() // 2, card_y + sx(28)))
 
         for i, line in enumerate([
