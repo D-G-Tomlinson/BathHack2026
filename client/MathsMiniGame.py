@@ -29,17 +29,17 @@ EASY = [l for l, v in TILE_VALUES.items() if v <= 5]
 
 
 BG     = (174, 207, 223)
-BROWN  = (140,  80,  35)
-TAN    = (184, 125,  75)
+BROWN  = (140, 80, 35)
+TAN    = (184, 125, 75)
 PURPLE = (176, 123, 172)
-LIME   = ( 80, 160,  60)
+LIME   = (80, 160, 60)
 CREAM  = (250, 243, 220)
-INK    = ( 55,  30,   8)
-RED    = (210,  85,  75)
-GOLD   = (229, 178,  93)
+INK    = (55, 30, 8)
+RED    = (210, 85, 75)
+GOLD   = (229, 178, 93)
 
-QTW, QTH = sx(110), sx(110)   # question tile size
-ATW, ATH = sx(95),  sx(95)    # answer tile size
+QTW, QTH = sx(110), sx(110)
+ATW, ATH = sx(95),  sx(95)
 
 fO  = pygame.font.SysFont("Comic Sans MS", sx(44), bold=True)
 fA  = pygame.font.SysFont("Comic Sans MS", sx(38), bold=True)

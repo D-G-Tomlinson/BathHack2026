@@ -48,14 +48,14 @@ BUTTONS = [
     for i in range(len(GAMES))
 ]
 BTN_QUIT = pygame.Rect(W // 2 - BTN_W // 2, START_Y + len(GAMES) * (BTN_H + BTN_GAP) + sx(10), BTN_W, BTN_H)
-QUIT_COLORS = ((220, 220, 215), (200, 200, 195), DARK)
+QUIT_COLOURS = ((220, 220, 215), (200, 200, 195), DARK)
 
 
-def draw_button(label, rect, color, hover_color, text_color, hovered):
-    bg = hover_color if hovered else color
+def draw_button(label, rect, colour, hover_colour, text_colour, hovered):
+    bg = hover_colour if hovered else colour
     pygame.draw.rect(screen, bg, rect, border_radius=sx(8))
     pygame.draw.rect(screen, DARK, rect, 2, border_radius=sx(8))
-    t = font_btn.render(label, True, text_color)
+    t = font_btn.render(label, True, text_colour)
     screen.blit(t, (rect.x + (rect.w - t.get_width()) // 2,
                     rect.y + (rect.h - t.get_height()) // 2))
 
@@ -105,7 +105,7 @@ while True:
 
     for i, (label, _, col, hcol, tcol, *_) in enumerate(GAMES):
         draw_button(label, BUTTONS[i], col, hcol, tcol, BUTTONS[i].collidepoint(mx, my))
-    draw_button("Quit", BTN_QUIT, *QUIT_COLORS, BTN_QUIT.collidepoint(mx, my))
+    draw_button("Quit", BTN_QUIT, *QUIT_COLOURS, BTN_QUIT.collidepoint(mx, my))
 
     pygame.display.flip()
     clock.tick(60)

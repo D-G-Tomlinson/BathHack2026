@@ -37,12 +37,12 @@ KEY_Y_START = GRID_Y + GRID_ROWS * (TILE_SIZE + TILE_GAP) + sx(20)
 
 WHITE     = (255, 255, 255)
 BLACK     = (20, 20, 20)
-GRAY_BG   = (174, 207, 223)
+GREY_BG   = (174, 207, 223)
 TILE_EMPTY = (255, 255, 255)
 TILE_EDGE  = (184, 125, 75)
 GREEN      = (130, 210, 100)
 YELLOW     = (229, 178, 93)
-DARK_GRAY  = (184, 125, 75)
+DARK_GREY  = (184, 125, 75)
 KEY_BG     = (176, 123, 172)
 TEXT_DARK  = (30, 30, 30)
 TEXT_LIGHT = (255, 255, 255)
@@ -73,7 +73,7 @@ def new_game():
         "current": "",
         "state": "playing",
         "message": "",
-        "key_colors": {},
+        "key_colours": {},
         "hint": f"Hint: it starts with {word[0]}!",
     }
 
@@ -94,24 +94,24 @@ def score_guess(guess, word):
             result[i] = (g, YELLOW)
             remaining[remaining.index(g)] = None
         else:
-            result[i] = (g, DARK_GRAY)
+            result[i] = (g, DARK_GREY)
 
     return result
 
 
-def draw_tile(surface, letter, color_bg, x, y, size=None, border=TILE_EDGE, reveal=True):
+def draw_tile(surface, letter, colour_bg, x, y, size=None, border=TILE_EDGE, reveal=True):
     if size is None:
         size = TILE_SIZE
     rect = pygame.Rect(x, y, size, size)
-    if reveal and color_bg not in (TILE_EMPTY, None):
-        pygame.draw.rect(surface, color_bg, rect, border_radius=sx(6))
+    if reveal and colour_bg not in (TILE_EMPTY, None):
+        pygame.draw.rect(surface, colour_bg, rect, border_radius=sx(6))
     else:
         pygame.draw.rect(surface, TILE_EMPTY, rect, border_radius=sx(6))
         pygame.draw.rect(surface, border, rect, sx(3), border_radius=sx(6))
 
     if letter:
-        text_color = TEXT_LIGHT if (reveal and color_bg == DARK_GRAY) else TEXT_DARK
-        surf = font_tile.render(letter, True, text_color)
+        text_colour = TEXT_LIGHT if (reveal and colour_bg == DARK_GREY) else TEXT_DARK
+        surf = font_tile.render(letter, True, text_colour)
         surface.blit(surf, surf.get_rect(center=rect.center))
 
 
@@ -123,8 +123,8 @@ def draw_grid(surface, game):
 
             if row < len(game["guesses"]):
                 scored = score_guess(game["guesses"][row], game["word"])
-                letter, color = scored[col]
-                draw_tile(surface, letter, color, x, y)
+                letter, colour = scored[col]
+                draw_tile(surface, letter, colour, x, y)
             elif row == len(game["guesses"]) and game["state"] == "playing":
                 letter = game["current"][col] if col < len(game["current"]) else ""
                 draw_tile(surface, letter, TILE_EMPTY, x, y, reveal=False)
@@ -141,18 +141,18 @@ def draw_keyboard(surface, game):
         for ki, key in enumerate(row_keys):
             x = start_x + ki * (KEY_SIZE + KEY_GAP)
             rect = pygame.Rect(x, y, KEY_SIZE, KEY_SIZE)
-            color = game["key_colors"].get(key, KEY_BG)
-            pygame.draw.rect(surface, color, rect, border_radius=sx(5))
-            text_color = TEXT_LIGHT if color in (DARK_GRAY, KEY_BG) else TEXT_DARK
-            surf = font_key.render(key, True, text_color)
+            colour = game["key_colours"].get(key, KEY_BG)
+            pygame.draw.rect(surface, colour, rect, border_radius=sx(5))
+            text_colour = TEXT_LIGHT if colour in (DARK_GREY, KEY_BG) else TEXT_DARK
+            surf = font_key.render(key, True, text_colour)
             surface.blit(surf, surf.get_rect(center=rect.center))
 
 
-def update_key_colors(game, scored):
-    for letter, color in scored:
-        current = game["key_colors"].get(letter)
-        if current != GREEN and (current != YELLOW or color == GREEN):
-            game["key_colors"][letter] = color
+def update_key_colours(game, scored):
+    for letter, colour in scored:
+        current = game["key_colours"].get(letter)
+        if current != GREEN and (current != YELLOW or colour == GREEN):
+            game["key_colours"][letter] = colour
 
 
 def handle_key(game, key_name):
@@ -168,7 +168,7 @@ def handle_key(game, key_name):
                 game["message"] = "Not in word list!"
                 return
             scored = score_guess(guess, game["word"])
-            update_key_colors(game, scored)
+            update_key_colours(game, scored)
             game["guesses"].append(guess)
             game["current"] = ""
 
@@ -192,7 +192,7 @@ def handle_key(game, key_name):
 
 
 def draw(surface, game):
-    surface.fill(GRAY_BG)
+    surface.fill(GREY_BG)
 
     title = font_title.render("CatWordle", True, BLACK)
     surface.blit(title, title.get_rect(centerx=W // 2, y=py(14)))
@@ -208,7 +208,7 @@ def draw(surface, game):
         surface.blit(msg_surf, msg_surf.get_rect(centerx=W // 2, y=H - sx(50)))
 
     if game["state"] != "playing":
-        hint = font_key.render("Press ENTER or R to play again", True, DARK_GRAY)
+        hint = font_key.render("Press ENTER or R to play again", True, DARK_GREY)
         surface.blit(hint, hint.get_rect(centerx=W // 2, y=H - sx(28)))
 
     pygame.display.flip()

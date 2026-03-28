@@ -19,10 +19,9 @@ TAN = (184, 125, 75)
 GREEN = (130, 210, 100)
 RED = (210, 85, 75)
 PURPLE = (176, 123, 172)
-GRAY = (180, 160, 140)
+GREY = (180, 160, 140)
 CREAM = (250, 243, 220)
 
-# 0=Brown (title/playing), 1=White (correct), 2=Grey (wrong)
 CAT_FILES = [
     os.path.join(ASSETS, "Images", "Brown Cat.png"),
     os.path.join(ASSETS, "Images", "White cat.png"),
@@ -189,7 +188,7 @@ def draw_button(rect: pygame.Rect, text: str, color, hover: bool = False):
 
 def draw_hearts(lives: int):
     for i in range(3):
-        c = TAN if i < lives else GRAY
+        c = TAN if i < lives else GREY
         cx = px(700) + i * sx(32)
         pygame.draw.circle(screen, c, (cx, py(28)), sx(10))
 
@@ -340,7 +339,7 @@ def play_round(word: str, hint: str, score: int, round_num: int, lives: int):
         if shake > 0:
             shake -= 1
 
-        draw_text("Type the word and press  Enter", font_small, GRAY, W // 2, py(462))
+        draw_text("Type the word and press  Enter", font_small, GREY, W // 2, py(462))
 
         if msg_timer > 0:
             draw_text(message, font_med, msg_col, W // 2, py(500))

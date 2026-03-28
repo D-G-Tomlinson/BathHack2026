@@ -21,7 +21,6 @@ def sx(v): return int(v * _s)
 def px(v): return _ox + int(v * _s)
 def py(v): return _oy + int(v * _s)
 
-# Fonts
 font_title   = pygame.font.SysFont("Comic Sans MS", sx(34), bold=True)
 font_sub     = pygame.font.SysFont("Comic Sans MS", sx(15))
 font_word    = pygame.font.SysFont("Comic Sans MS", sx(17), bold=True)
@@ -31,29 +30,28 @@ font_ui      = pygame.font.SysFont("Comic Sans MS", sx(14))
 font_msg     = pygame.font.SysFont("Comic Sans MS", sx(19), bold=True)
 font_btn     = pygame.font.SysFont("Comic Sans MS", sx(15), bold=True)
 
-# Colors
-BG          = (174, 207, 223)   # AECFDF
+BG          = (174, 207, 223)
 WHITE       = (255, 255, 255)
-BLACK       = ( 10,  10,  10)
-LIGHT_GRAY  = (250, 243, 220)   # cream
-GRAY        = (200, 170, 130)   # warm mid
-DARK        = (140,  80,  35)   # B87D4B-ish
-TILE_UNSEL  = (250, 243, 220)   # cream
-TILE_SEL    = (184, 125,  75)   # B87D4B brown
+BLACK       = (10, 10, 10)
+LIGHT_GREY  = (250, 243, 220)
+GREY        = (200, 170, 130)
+DARK        = (140, 80, 35)
+TILE_UNSEL  = (250, 243, 220)
+TILE_SEL    = (184, 125, 75)
 TILE_SEL_T  = (255, 250, 240)
-TILE_UNSEL_T = (55,  30,   8)
+TILE_UNSEL_T = (55, 30, 8)
 
-CAT_COLORS = [
-    (229, 178,  93),   # E5B25D - easy
-    (184, 125,  75),   # B87D4B - medium
-    (174, 207, 223),   # AECFDF - hard
-    (176, 123, 172),   # B07BAC - tricky
+CAT_COLOURS = [
+    (229, 178, 93),
+    (184, 125, 75),
+    (174, 207, 223),
+    (176, 123, 172),
 ]
 CAT_TEXT = [
-    ( 70,  40,   0),
+    (70, 40, 0),
     (255, 250, 240),
-    ( 20,  60, 100),
-    ( 60,  20,  80),
+    (20, 60, 100),
+    (60, 20, 80),
 ]
 
 PUZZLES = [
@@ -134,7 +132,6 @@ PUZZLES = [
     },
 ]
 
-# Grid layout constants
 TILE_W   = sx(170)
 TILE_H   = sx(58)
 TILE_GAP = sx(10)
@@ -145,8 +142,8 @@ GRID_Y   = py(100)
 ROW_H    = TILE_H + TILE_GAP
 
 
-def rounded_rect(surf, color, rect, r=8, border=0, bcol=None):
-    pygame.draw.rect(surf, color, rect, border_radius=r)
+def rounded_rect(surf, colour, rect, r=8, border=0, bcol=None):
+    pygame.draw.rect(surf, colour, rect, border_radius=r)
     if border and bcol:
         pygame.draw.rect(surf, bcol, rect, border, border_radius=r)
 
@@ -154,10 +151,10 @@ def rounded_rect(surf, color, rect, r=8, border=0, bcol=None):
 def draw_btn(surf, label, rect, bg, fg, hover_bg=None, active=True):
     col = hover_bg if (hover_bg and rect.collidepoint(pygame.mouse.get_pos())) else bg
     if not active:
-        col = LIGHT_GRAY
-        fg  = GRAY
+        col = LIGHT_GREY
+        fg  = GREY
     rounded_rect(surf, col, rect, r=sx(8))
-    rounded_rect(surf, DARK if active else GRAY, rect, r=sx(8), border=sx(2), bcol=DARK if active else GRAY)
+    rounded_rect(surf, DARK if active else GREY, rect, r=sx(8), border=sx(2), bcol=DARK if active else GREY)
     t = font_btn.render(label, True, fg)
     surf.blit(t, (rect.x + (rect.w - t.get_width()) // 2,
                   rect.y + (rect.h - t.get_height()) // 2))
@@ -187,7 +184,7 @@ class Game:
         self.mistakes   = 6
         self.hints_left = 2
         self.msg       = ""
-        self.msg_color = BLACK
+        self.msg_colour = BLACK
         self.msg_timer = 0
         self.state     = "playing"
         self.shake     = 0
@@ -209,7 +206,6 @@ class Game:
         cats_in_sel = [w["cat"] for w in sel_words]
 
         if len(set(cats_in_sel)) == 1:
-            # Correct guess
             ci = cats_in_sel[0]
             for w in sel_words:
                 w["solved"] = True
@@ -220,12 +216,11 @@ class Game:
                 "difficulty": cat["difficulty"],
             })
             self.selected = set()
-            self.set_msg(f'Correct! "{cat["name"]}"', CAT_COLORS[cat["difficulty"]])
+            self.set_msg(f'Correct! "{cat["name"]}"', CAT_COLOURS[cat["difficulty"]])
             if len(self.solved) == 4:
                 self.state = "won"
-                self.set_msg("Purrfect! You solved it all!", CAT_COLORS[0])
+                self.set_msg("Purrfect! You solved it all!", CAT_COLOURS[0])
         else:
-            # Wrong guess
             self.mistakes -= 1
             if max(Counter(cats_in_sel).values()) == 3:
                 self.set_msg("So close - one away!", (200, 120, 50))
@@ -238,7 +233,7 @@ class Game:
 
     def set_msg(self, m, col=None):
         self.msg       = m
-        self.msg_color = col if col else BLACK
+        self.msg_colour = col if col else BLACK
         self.msg_timer = 220
 
     def shuffle(self):
@@ -259,11 +254,10 @@ class Game:
         if unsolved_cats:
             cat = random.choice(unsolved_cats)
             self.hints_left -= 1
-            self.set_msg(f'Hint: Find "{cat["name"]}"', CAT_COLORS[cat["difficulty"]])
+            self.set_msg(f'Hint: Find "{cat["name"]}"', CAT_COLOURS[cat["difficulty"]])
 
 
 def draw_mistake_pips(surf, mistakes, cx, y):
-    """Draw small filled/empty circles indicating remaining mistakes."""
     pip_r   = sx(6)
     spacing = sx(18)
     total_w = 6 * spacing
@@ -281,7 +275,6 @@ def main():
     while True:
         clock.tick(60)
 
-        # Button rects (constant layout below the 4-row grid)
         btn_y    = GRID_Y + 4 * ROW_H + sx(18)
         btn_w    = sx(100)
         btn_h    = sx(40)
@@ -334,7 +327,7 @@ def main():
         for i, cat in enumerate(game.solved):
             bar  = pygame.Rect(GRID_X, GRID_Y + i * ROW_H, BAR_W, TILE_H)
             diff = cat["difficulty"]
-            rounded_rect(screen, CAT_COLORS[diff], bar, r=sx(8))
+            rounded_rect(screen, CAT_COLOURS[diff], bar, r=sx(8))
             nt = font_cat.render(cat["name"].upper(), True, CAT_TEXT[diff])
             screen.blit(nt, (bar.x + (bar.w - nt.get_width()) // 2, bar.y + sx(8)))
             wt = font_ui.render("  ".join(cat["words"]), True, CAT_TEXT[diff])
@@ -355,22 +348,22 @@ def main():
                             r.y + (r.h - t.get_height()) // 2))
 
         if game.msg and game.msg_timer > 0:
-            t = font_msg.render(game.msg, True, game.msg_color)
+            t = font_msg.render(game.msg, True, game.msg_colour)
             screen.blit(t, (W // 2 - t.get_width() // 2, btn_y - sx(33)))
 
         if game.state == "playing":
-            draw_btn(screen, "Shuffle",      btn_shuf, LIGHT_GRAY, BLACK, hover_bg=GRAY)
-            draw_btn(screen, "Deselect All", btn_des,  LIGHT_GRAY, BLACK, hover_bg=GRAY)
+            draw_btn(screen, "Shuffle",      btn_shuf, LIGHT_GREY, BLACK, hover_bg=GREY)
+            draw_btn(screen, "Deselect All", btn_des,  LIGHT_GREY, BLACK, hover_bg=GREY)
             can_hint = game.hints_left > 0
             draw_btn(screen, f"Hint ({game.hints_left})", btn_hint,
-                     (174, 207, 223) if can_hint else LIGHT_GRAY,
-                     BLACK          if can_hint else GRAY,
+                     (174, 207, 223) if can_hint else LIGHT_GREY,
+                     BLACK          if can_hint else GREY,
                      hover_bg=(140, 180, 200) if can_hint else None,
                      active=can_hint)
             can_sub = len(game.selected) == 4
             draw_btn(screen, "Submit", btn_sub,
-                     (176, 123, 172) if can_sub else LIGHT_GRAY,
-                     WHITE          if can_sub else GRAY,
+                     (176, 123, 172) if can_sub else LIGHT_GREY,
+                     WHITE          if can_sub else GREY,
                      hover_bg=(150, 100, 148) if can_sub else None,
                      active=can_sub)
 
