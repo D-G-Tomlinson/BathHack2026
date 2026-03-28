@@ -101,7 +101,7 @@ def update(game, events):
                 return "main_menu"
         elif event.type == pg.KEYDOWN and username_active:
             if event.key == pg.K_BACKSPACE:
-                game.userid = game.userid[:-1]
+                userid = userid[:-1]
             elif event.key == pg.K_RETURN:
                 code = new_game(userid)
                 game.update(code,userid)
