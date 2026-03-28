@@ -48,13 +48,108 @@ def _load_cat(filename):
     return pygame.transform.smoothscale(img, (_CAT_SIZE, _CAT_SIZE))
 
 
-def run(screen, clock):
+def _load_cats():
+    """Load corner cat images; returns list of (surf, corner)."""
+    return [(_load_cat(f), corner) for f, corner in _CAT_FILES]
+
+
+def _draw_cats(screen, cat_images):
+    WIDTH, HEIGHT = screen.get_size()
+    for surf, corner in cat_images:
+        w_img, h_img = surf.get_size()
+        if corner == "topleft":
+            pos = (0, 0)
+        elif corner == "topright":
+            pos = (WIDTH - w_img, 0)
+        elif corner == "bottomleft":
+            pos = (0, HEIGHT - h_img)
+        else:
+            pos = (WIDTH - w_img, HEIGHT - h_img)
+        screen.blit(surf, pos)
+
+
+def _draw_button(screen, text, rect, font):
+    mouse = pygame.mouse.get_pos()
+    hovered = pygame.Rect(rect).collidepoint(mouse)
+    colour = YELLOW if hovered else RED
+    pygame.draw.rect(screen, colour, rect, border_radius=16)
+    pygame.draw.rect(screen, (255, 255, 255), rect, 3, border_radius=16)
+    label = font.render(text, True, BLACK)
+    lx = rect[0] + (rect[2] - label.get_width()) // 2
+    ly = rect[1] + (rect[3] - label.get_height()) // 2
+    screen.blit(label, (lx, ly))
+
+
+def start_screen(screen, clock, cat_images):
+    WIDTH, HEIGHT = screen.get_size()
+    font_title = pygame.font.SysFont("Comic Sans MS", 100, bold=True)
+    font_sub   = pygame.font.SysFont("Comic Sans MS", 40,  bold=True)
+    font_btn   = pygame.font.SysFont("Comic Sans MS", 60,  bold=True)
+
+    btn_w, btn_h = 320, 90
+    btn_rect = (WIDTH // 2 - btn_w // 2, HEIGHT * 2 // 3, btn_w, btn_h)
+
+    while True:
+        clock.tick(60)
+        screen.fill(BLACK)
+        _draw_cats(screen, cat_images)
+
+        title = font_title.render("Scrabble Cats", True, YELLOW)
+        screen.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 5))
+
+        sub = font_sub.render("Karaoke Night!", True, RED)
+        screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, HEIGHT // 5 + title.get_height() + 10))
+
+        _draw_button(screen, "Start", btn_rect, font_btn)
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if pygame.Rect(btn_rect).collidepoint(event.pos):
+                    return
+
+
+def end_screen(screen, clock, cat_images):
+    WIDTH, HEIGHT = screen.get_size()
+    font_title = pygame.font.SysFont("Comic Sans MS", 90,  bold=True)
+    font_sub   = pygame.font.SysFont("Comic Sans MS", 40,  bold=True)
+    font_btn   = pygame.font.SysFont("Comic Sans MS", 60,  bold=True)
+
+    btn_w, btn_h = 320, 90
+    btn_rect = (WIDTH // 2 - btn_w // 2, HEIGHT * 2 // 3, btn_w, btn_h)
+
+    while True:
+        clock.tick(60)
+        screen.fill(BLACK)
+        _draw_cats(screen, cat_images)
+
+        title = font_title.render("Thanks for singing!", True, YELLOW)
+        screen.blit(title, (WIDTH // 2 - title.get_width() // 2, HEIGHT // 5))
+
+        sub = font_sub.render("MEOW!", True, RED)
+        screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, HEIGHT // 5 + title.get_height() + 10))
+
+        _draw_button(screen, "Quit", btn_rect, font_btn)
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if pygame.Rect(btn_rect).collidepoint(event.pos):
+                    sys.exit()
+
+
+def _run_song(screen, clock, cat_images):
     WIDTH, HEIGHT = screen.get_size()
     font_normal = pygame.font.SysFont("Comic Sans MS", 80, bold=True)
     font_meow   = pygame.font.SysFont("Comic Sans MS", 120, bold=True)
-
-    cat_images = [(pygame.transform.smoothscale(_load_cat(f), (_CAT_SIZE, _CAT_SIZE)), corner)
-                  for f, corner in _CAT_FILES]
 
     try:
         pygame.mixer.music.load("hall_of_the_mountain_king.mp3")
@@ -97,7 +192,6 @@ def run(screen, clock):
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return
@@ -145,6 +239,14 @@ def run(screen, clock):
         pygame.display.flip()
 
     pygame.mixer.music.stop()
+
+
+def run(screen, clock):
+    """Entry point called by the menu - shows start screen, song, then end screen."""
+    cat_images = _load_cats()
+    start_screen(screen, clock, cat_images)
+    _run_song(screen, clock, cat_images)
+    end_screen(screen, clock, cat_images)
 
 
 def launch():

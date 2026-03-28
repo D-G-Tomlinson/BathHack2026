@@ -1,5 +1,6 @@
 import pygame
 import random
+import os
 
 pygame.init()
 
@@ -52,6 +53,30 @@ TOTAL_QUESTIONS = 5
 # 4 answer tiles in a row
 SPOTS = [px(133), px(310), px(487), px(664)]
 ANS_Y = py(490)
+
+IMG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Images")
+
+def _cat(name, h):
+    img = pygame.image.load(os.path.join(IMG_DIR, name)).convert_alpha()
+    w = int(img.get_width() * h / img.get_height())
+    return pygame.transform.smoothscale(img, (w, h))
+
+# large flanking cats for start screen
+cat_orange   = _cat("Orange Cat.png",         sx(115))
+cat_tabby    = _cat("Tabby cat.png",           sx(115))
+# sleeping cat for end screen
+cat_sleeping = _cat("Sleeping Tabby Cat.png", sx(100))
+# small cats for game screen side margins
+cat_grey_sm  = _cat("Grey cat.png",            sx(85))
+cat_black_sm = _cat("Black cat.png",           sx(85))
+# bottom row of cats for start screen
+cat_row = [
+    _cat("Orange Cat.png",  sx(88)),
+    _cat("Grey cat.png",     sx(88)),
+    _cat("Black cat.png",    sx(88)),
+    _cat("Brown Cat.png",    sx(88)),
+    _cat("White cat.png",    sx(88)),
+]
 
 
 def draw_tile_img(surf, letter, cx, cy, size):
@@ -106,6 +131,64 @@ def new_question():
     return a, av, op, b, bv, ans, opts
 
 
+def start_screen():
+    btn_w, btn_h = sx(200), sx(60)
+    btn_x = W // 2 - btn_w // 2
+    btn_y = py(420)
+    btn_rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
+
+    while True:
+        mx, my = pygame.mouse.get_pos()
+        hovered = btn_rect.collidepoint(mx, my)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return False
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if hovered:
+                    return True
+
+        screen.fill(BG)
+
+        # cats flanking the instructions card
+        screen.blit(cat_orange, (px(5), py(195)))
+        screen.blit(cat_tabby,  (px(795) - cat_tabby.get_width(), py(195)))
+        # bottom row of cats
+        for img, cx in zip(cat_row, [px(80), px(240), px(400), px(560), px(720)]):
+            screen.blit(img, (cx - img.get_width() // 2, py(502)))
+
+        # Title
+        title = fB.render("Scrabble Maths!", True, PURPLE)
+        screen.blit(title, (W // 2 - title.get_width() // 2, py(90)))
+
+        # Instructions card
+        card_x, card_y, card_w, card_h = px(100), py(175), sx(600), sx(220)
+        pygame.draw.rect(screen, CREAM, (card_x, card_y, card_w, card_h), border_radius=sx(14))
+        pygame.draw.rect(screen, TAN, (card_x, card_y, card_w, card_h), sx(2), border_radius=sx(14))
+
+        lines = [
+            "Each Scrabble tile has a point value.",
+            "You'll be shown two tiles and an operation.",
+            "Pick the correct answer from 4 choices.",
+            f"Answer {TOTAL_QUESTIONS} questions, good luck!",
+        ]
+        for i, line in enumerate(lines):
+            s = fS.render(line, True, INK)
+            screen.blit(s, (W // 2 - s.get_width() // 2, card_y + sx(24) + i * sx(46)))
+
+        # Play button
+        btn_color = LIME if hovered else TAN
+        pygame.draw.rect(screen, btn_color, btn_rect, border_radius=sx(12))
+        pygame.draw.rect(screen, BROWN, btn_rect, sx(3), border_radius=sx(12))
+        play_label = fU.render("PLAY", True, CREAM)
+        screen.blit(play_label, (W // 2 - play_label.get_width() // 2, btn_y + btn_h // 2 - play_label.get_height() // 2))
+
+        pygame.display.flip()
+        clock.tick(60)
+
+
 def run_game():
     score = 0
     q_num = 1
@@ -140,6 +223,11 @@ def run_game():
             a, av, op, b, bv, ans, opts = new_question()
 
         screen.fill(BG)
+
+        # cats in the side margins (only when there's room)
+        if _ox > 40:
+            screen.blit(cat_grey_sm,  (_ox // 2 - cat_grey_sm.get_width() // 2,  H // 2 - cat_grey_sm.get_height() // 2))
+            screen.blit(cat_black_sm, (W - _ox // 2 - cat_black_sm.get_width() // 2, H // 2 - cat_black_sm.get_height() // 2))
 
         sc = fU.render(f"Score: {score}", True, TAN)
         screen.blit(sc, (px(18), py(14)))
@@ -191,27 +279,51 @@ def run_game():
 
 
 def end_screen(score):
+    btn_back = pygame.Rect(W // 2 - sx(75), py(354), sx(150), sx(48))
+
     while True:
+        mx, my = pygame.mouse.get_pos()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return
-            if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if btn_back.collidepoint(mx, my):
+                    return
+
         screen.fill(BG)
-        pygame.draw.rect(screen, CREAM, (px(160), py(170), sx(480), sx(240)), border_radius=sx(16))
-        pygame.draw.rect(screen, TAN, (px(160), py(170), sx(480), sx(240)), sx(3), border_radius=sx(16))
+        screen.blit(cat_sleeping, (W // 2 - cat_sleeping.get_width() // 2, py(55)))
+        pygame.draw.rect(screen, CREAM, (px(160), py(170), sx(480), sx(260)), border_radius=sx(16))
+        pygame.draw.rect(screen, TAN,   (px(160), py(170), sx(480), sx(260)), sx(3), border_radius=sx(16))
         screen.blit(fB.render("Finished!", True, PURPLE), (W//2 - fB.size("Finished!")[0]//2, py(200)))
-        screen.blit(fB.render(f"Score: {score}", True, TAN), (W//2 - fB.size(f"Score: {score}")[0]//2, py(268)))
-        screen.blit(fS.render("Press any key to continue", True, TAN), (W//2 - fS.size("Press any key to continue")[0]//2, py(360)))
+        screen.blit(fB.render(f"Score: {score}/{TOTAL_QUESTIONS}", True, TAN), (W//2 - fB.size(f"Score: {score}/{TOTAL_QUESTIONS}")[0]//2, py(268)))
+
+        bk_col = RED if btn_back.collidepoint(mx, my) else (200, 160, 120)
+        pygame.draw.rect(screen, bk_col, btn_back, border_radius=sx(10))
+        pygame.draw.rect(screen, BROWN,  btn_back, sx(2), border_radius=sx(10))
+        bk_lbl = fU.render("Back", True, CREAM)
+        screen.blit(bk_lbl, bk_lbl.get_rect(center=btn_back.center))
+
         pygame.display.flip()
         clock.tick(60)
 
 
-try:
-    end_screen(run_game())
-except Exception as e:
-    import traceback
-    traceback.print_exc()
-    input("Press Enter to close...")
-finally:
-    pygame.quit()
+def run(scr, clk):
+    global screen, clock
+    screen = scr
+    clock = clk
+    if start_screen():
+        end_screen(run_game())
+
+
+if __name__ == "__main__":
+    try:
+        if start_screen():
+            end_screen(run_game())
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        input("Press Enter to close...")
+    finally:
+        pygame.quit()

@@ -141,6 +141,30 @@ GRID_X   = (W - BAR_W) // 2
 GRID_Y   = py(100)
 ROW_H    = TILE_H + TILE_GAP
 
+IMG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Images")
+
+def _cat(name, h):
+    img = pygame.image.load(os.path.join(IMG_DIR, name)).convert_alpha()
+    w = int(img.get_width() * h / img.get_height())
+    return pygame.transform.smoothscale(img, (w, h))
+
+# large flanking cats for start screen
+cat_orange   = _cat("Orange Cat.png",         sx(115))
+cat_tabby    = _cat("Tabby cat.png",           sx(115))
+# sleeping cat for end / game-over state
+cat_sleeping = _cat("Sleeping Tabby Cat.png", sx(95))
+# small cats for game screen side margins
+cat_grey_sm  = _cat("Grey cat.png",            sx(85))
+cat_black_sm = _cat("Black cat.png",           sx(85))
+# bottom row for start screen
+cat_row = [
+    _cat("Orange Cat.png",  sx(88)),
+    _cat("Grey cat.png",     sx(88)),
+    _cat("Black cat.png",    sx(88)),
+    _cat("Brown Cat.png",    sx(88)),
+    _cat("White cat.png",    sx(88)),
+]
+
 
 def rounded_rect(surf, colour, rect, r=8, border=0, bcol=None):
     pygame.draw.rect(surf, colour, rect, border_radius=r)
@@ -257,6 +281,64 @@ class Game:
             self.set_msg(f'Hint: Find "{cat["name"]}"', CAT_COLOURS[cat["difficulty"]])
 
 
+def start_screen():
+    btn_w, btn_h = sx(200), sx(55)
+    btn_x = W // 2 - btn_w // 2
+    btn_y = py(435)
+    btn_rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
+
+    while True:
+        mx, my = pygame.mouse.get_pos()
+        hovered = btn_rect.collidepoint(mx, my)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return False
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if hovered:
+                    return True
+
+        screen.fill(BG)
+
+        # cats flanking the instructions card
+        screen.blit(cat_orange, (px(5), py(160)))
+        screen.blit(cat_tabby,  (px(795) - cat_tabby.get_width(), py(160)))
+        # bottom row of cats
+        for img, cx in zip(cat_row, [px(80), px(240), px(400), px(560), px(720)]):
+            screen.blit(img, (cx - img.get_width() // 2, py(530)))
+
+        # Title
+        title = font_title.render("Cat Connections!", True, CAT_COLOURS[3])
+        screen.blit(title, (W // 2 - title.get_width() // 2, py(75)))
+
+        # Instructions card
+        card_x, card_y, card_w, card_h = px(100), py(158), sx(600), sx(250)
+        rounded_rect(screen, LIGHT_GREY, (card_x, card_y, card_w, card_h), r=sx(14))
+        rounded_rect(screen, GREY, (card_x, card_y, card_w, card_h), r=sx(14), border=sx(2), bcol=GREY)
+
+        lines = [
+            "16 words are shown in a 4x4 grid.",
+            "Find 4 groups of 4 that share a connection.",
+            "Select 4 words then press Submit to check.",
+            "You have 6 mistakes and 2 hints, good luck!",
+        ]
+        for i, line in enumerate(lines):
+            s = font_word.render(line, True, DARK)
+            screen.blit(s, (W // 2 - s.get_width() // 2, card_y + sx(28) + i * sx(50)))
+
+        # Play button
+        btn_col = CAT_COLOURS[1] if hovered else CAT_COLOURS[0]
+        rounded_rect(screen, btn_col, btn_rect, r=sx(12))
+        rounded_rect(screen, DARK, btn_rect, r=sx(12), border=sx(2), bcol=DARK)
+        label = font_word.render("PLAY", True, WHITE)
+        screen.blit(label, (W // 2 - label.get_width() // 2, btn_y + btn_h // 2 - label.get_height() // 2))
+
+        pygame.display.flip()
+        pygame.time.Clock().tick(60)
+
+
 def draw_mistake_pips(surf, mistakes, cx, y):
     pip_r   = sx(6)
     spacing = sx(18)
@@ -268,9 +350,58 @@ def draw_mistake_pips(surf, mistakes, cx, y):
         pygame.draw.circle(surf, DARK, (start_x + i * spacing + pip_r, y + pip_r), pip_r, 2)
 
 
+def end_screen(game):
+    won = game.state == "won"
+    cat_img = cat_tabby if won else cat_sleeping
+
+    btn_back = pygame.Rect(W // 2 - sx(82), py(445), sx(165), sx(48))
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if btn_back.collidepoint(event.pos):
+                    return
+
+        screen.fill(BG)
+        if _ox > 40:
+            screen.blit(cat_grey_sm,  (_ox // 2 - cat_grey_sm.get_width() // 2,  H // 2 - cat_grey_sm.get_height() // 2))
+            screen.blit(cat_black_sm, (W - _ox // 2 - cat_black_sm.get_width() // 2, H // 2 - cat_black_sm.get_height() // 2))
+
+        screen.blit(cat_img, (W // 2 - cat_img.get_width() // 2, py(48)))
+
+        card = pygame.Rect(px(100), py(188), sx(600), sx(230))
+        rounded_rect(screen, LIGHT_GREY, card, r=sx(14))
+        rounded_rect(screen, GREY, card, r=sx(14), border=sx(2), bcol=GREY)
+
+        msg = "Purrfect! You solved it all!" if won else "Game over! Better luck next time!"
+        col = CAT_COLOURS[0] if won else (180, 60, 60)
+        t = font_title.render(msg, True, col)
+        screen.blit(t, (W // 2 - t.get_width() // 2, card.y + sx(30)))
+
+        mistakes_used = 6 - game.mistakes
+        for i, line in enumerate([
+            f"Mistakes used: {mistakes_used} / 6",
+            f"Categories found: {len(game.solved)} / 4",
+        ]):
+            s = font_sub.render(line, True, DARK)
+            screen.blit(s, (W // 2 - s.get_width() // 2, card.y + sx(105) + i * sx(40)))
+
+        draw_btn(screen, "Back", btn_back, LIGHT_GREY, BLACK, hover_bg=GREY)
+
+        pygame.display.flip()
+        pygame.time.Clock().tick(60)
+
+
 def main():
+    if not start_screen():
+        return
     clock = pygame.time.Clock()
     game  = Game()
+    end_delay = 0
 
     while True:
         clock.tick(60)
@@ -285,8 +416,9 @@ def main():
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
                 sys.exit()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
@@ -313,10 +445,18 @@ def main():
 
         screen.fill(BG)
 
+        # cats in side margins
+        if _ox > 40:
+            screen.blit(cat_grey_sm,  (_ox // 2 - cat_grey_sm.get_width() // 2,  H // 2 - cat_grey_sm.get_height() // 2))
+            screen.blit(cat_black_sm, (W - _ox // 2 - cat_black_sm.get_width() // 2, H // 2 - cat_black_sm.get_height() // 2))
+
         t = font_title.render("Cat Connections", True, BLACK)
         screen.blit(t, (W // 2 - t.get_width() // 2, py(10)))
 
-        t = font_sub.render(game.title, True, DARK)
+        if game.msg and game.msg_timer > 0:
+            t = font_msg.render(game.msg, True, game.msg_colour)
+        else:
+            t = font_sub.render(game.title, True, DARK)
         screen.blit(t, (W // 2 - t.get_width() // 2, py(56)))
 
         pip_cx = px(740)
@@ -347,10 +487,6 @@ def main():
             screen.blit(t, (r.x + (r.w - t.get_width()) // 2,
                             r.y + (r.h - t.get_height()) // 2))
 
-        if game.msg and game.msg_timer > 0:
-            t = font_msg.render(game.msg, True, game.msg_colour)
-            screen.blit(t, (W // 2 - t.get_width() // 2, btn_y - sx(33)))
-
         if game.state == "playing":
             draw_btn(screen, "Shuffle",      btn_shuf, LIGHT_GREY, BLACK, hover_bg=GREY)
             draw_btn(screen, "Deselect All", btn_des,  LIGHT_GREY, BLACK, hover_bg=GREY)
@@ -369,6 +505,19 @@ def main():
 
 
         pygame.display.flip()
+
+        if game.state in ("won", "lost"):
+            end_delay += 1
+            if end_delay >= 90:
+                pygame.event.clear()
+                end_screen(game)
+                return
+
+
+def run(scr, clk=None):
+    global screen
+    screen = scr
+    main()
 
 
 if __name__ == "__main__":

@@ -64,6 +64,132 @@ font_key   = pygame.font.SysFont("Comic Sans MS", sx(18), bold=True)
 font_msg   = pygame.font.SysFont("Comic Sans MS", sx(26), bold=True)
 font_title = pygame.font.SysFont("Comic Sans MS", sx(42), bold=True)
 
+IMG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Images")
+
+def _cat(name, h):
+    img = pygame.image.load(os.path.join(IMG_DIR, name)).convert_alpha()
+    w = int(img.get_width() * h / img.get_height())
+    return pygame.transform.smoothscale(img, (w, h))
+
+# centred decoration above the instructions card
+cat_deco     = _cat("Orange Cat.png",         sx(90))
+cat_sleeping = _cat("Sleeping Tabby Cat.png", sx(85))
+# side cats for the game screen margins
+cat_grey_sm  = _cat("Grey cat.png",            sx(85))
+cat_black_sm = _cat("Black cat.png",           sx(85))
+# bottom row (3 cats fits the narrow layout)
+cat_row = [
+    _cat("Tabby cat.png",  sx(88)),
+    _cat("Brown Cat.png",  sx(88)),
+    _cat("White cat.png",  sx(88)),
+]
+
+
+def start_screen():
+    btn_w, btn_h = sx(200), sx(55)
+    btn_x = W // 2 - btn_w // 2
+    btn_y = py(450)
+    btn_rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
+
+    while True:
+        hovered = btn_rect.collidepoint(pygame.mouse.get_pos())
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return False
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if hovered:
+                    return True
+
+        screen.fill(GREY_BG)
+
+        # centred cat above the card
+        screen.blit(cat_deco, (W // 2 - cat_deco.get_width() // 2, py(75)))
+        # bottom row of cats
+        for img, cx in zip(cat_row, [px(85), px(260), px(435)]):
+            screen.blit(img, (cx - img.get_width() // 2, py(605)))
+
+        # Title
+        title = font_title.render("CatWordle!", True, BLACK)
+        screen.blit(title, (W // 2 - title.get_width() // 2, py(22)))
+
+        # Instructions card
+        card_x, card_y, card_w, card_h = px(30), py(182), sx(460), sx(245)
+        pygame.draw.rect(screen, TILE_EMPTY, (card_x, card_y, card_w, card_h), border_radius=sx(14))
+        pygame.draw.rect(screen, TILE_EDGE,  (card_x, card_y, card_w, card_h), sx(2), border_radius=sx(14))
+
+        lines = [
+            "Guess the 5-letter cat word!",
+            "You have 8 tries.",
+            "Green = right letter, right spot.",
+            "Yellow = right letter, wrong spot.",
+            "Brown = letter not in the word.",
+        ]
+        for i, line in enumerate(lines):
+            s = font_key.render(line, True, BLACK)
+            screen.blit(s, (W // 2 - s.get_width() // 2, card_y + sx(24) + i * sx(40)))
+
+        # Play button
+        btn_col = GREEN if hovered else YELLOW
+        pygame.draw.rect(screen, btn_col,    btn_rect, border_radius=sx(12))
+        pygame.draw.rect(screen, TILE_EDGE,  btn_rect, sx(2), border_radius=sx(12))
+        label = font_msg.render("PLAY", True, BLACK)
+        screen.blit(label, (W // 2 - label.get_width() // 2, btn_y + btn_h // 2 - label.get_height() // 2))
+
+        pygame.display.flip()
+        pygame.time.Clock().tick(60)
+
+
+def end_screen(game):
+    won = game["state"] == "won"
+    cat_img = cat_deco if won else cat_sleeping
+
+    btn_back = pygame.Rect(W // 2 - sx(77), py(480), sx(155), sx(52))
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if btn_back.collidepoint(event.pos):
+                    return
+
+        screen.fill(GREY_BG)
+        if _ox > 40:
+            screen.blit(cat_grey_sm,  (_ox // 2 - cat_grey_sm.get_width() // 2,  H // 2 - cat_grey_sm.get_height() // 2))
+            screen.blit(cat_black_sm, (W - _ox // 2 - cat_black_sm.get_width() // 2, H // 2 - cat_black_sm.get_height() // 2))
+        for img, cx in zip(cat_row, [px(85), px(260), px(435)]):
+            screen.blit(img, (cx - img.get_width() // 2, py(620)))
+
+        screen.blit(cat_img, (W // 2 - cat_img.get_width() // 2, py(72)))
+
+        card_x, card_y, card_w, card_h = px(30), py(185), sx(460), sx(265)
+        pygame.draw.rect(screen, TILE_EMPTY, (card_x, card_y, card_w, card_h), border_radius=sx(14))
+        pygame.draw.rect(screen, TILE_EDGE,  (card_x, card_y, card_w, card_h), sx(2), border_radius=sx(14))
+
+        msg_col = GREEN if won else (180, 60, 60)
+        t = font_large.render(game["message"], True, msg_col)
+        screen.blit(t, (W // 2 - t.get_width() // 2, card_y + sx(28)))
+
+        for i, line in enumerate([
+            f"Guesses used: {len(game['guesses'])} / {GRID_ROWS}",
+            game["hint"],
+        ]):
+            s = font_key.render(line, True, BLACK)
+            screen.blit(s, (W // 2 - s.get_width() // 2, card_y + sx(105) + i * sx(48)))
+
+        bk_col = YELLOW if btn_back.collidepoint(pygame.mouse.get_pos()) else TILE_EMPTY
+        pygame.draw.rect(screen, bk_col,    btn_back, border_radius=sx(12))
+        pygame.draw.rect(screen, TILE_EDGE, btn_back, sx(2), border_radius=sx(12))
+        screen.blit(font_msg.render("Back", True, BLACK), font_msg.render("Back", True, BLACK).get_rect(center=btn_back.center))
+
+        pygame.display.flip()
+        pygame.time.Clock().tick(60)
+
 
 def new_game():
     word = random.choice(CAT_WORDS)
@@ -194,6 +320,11 @@ def handle_key(game, key_name):
 def draw(surface, game):
     surface.fill(GREY_BG)
 
+    # side cats in screen margins
+    if _ox > 40:
+        surface.blit(cat_grey_sm,  (_ox // 2 - cat_grey_sm.get_width() // 2,  H // 2 - cat_grey_sm.get_height() // 2))
+        surface.blit(cat_black_sm, (W - _ox // 2 - cat_black_sm.get_width() // 2, H // 2 - cat_black_sm.get_height() // 2))
+
     title = font_title.render("CatWordle", True, BLACK)
     surface.blit(title, title.get_rect(centerx=W // 2, y=py(14)))
 
@@ -207,31 +338,58 @@ def draw(surface, game):
         msg_surf = font_msg.render(game["message"], True, BLACK)
         surface.blit(msg_surf, msg_surf.get_rect(centerx=W // 2, y=H - sx(50)))
 
-    if game["state"] != "playing":
-        hint = font_key.render("Press ENTER or R to play again", True, DARK_GREY)
-        surface.blit(hint, hint.get_rect(centerx=W // 2, y=H - sx(28)))
-
     pygame.display.flip()
 
 
-game = new_game()
-clock = pygame.time.Clock()
-running = True
+def run(scr, clk=None):
+    global screen, clock
+    screen = scr
+    clock = clk or pygame.time.Clock()
+    if not start_screen():
+        return
+    game = new_game()
+    end_timer = 0
 
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return
+                handle_key(game, pygame.key.name(event.key).upper())
+        draw(screen, game)
+        if game["state"] != "playing":
+            end_timer += 1
+            if end_timer >= 90:
+                end_screen(game)
+                return
+        clock.tick(60)
 
-        elif event.type == pygame.KEYDOWN:
-            key_name = pygame.key.name(event.key).upper()
 
-            if game["state"] != "playing" and key_name in ("RETURN", "KP_ENTER", "R"):
-                game = new_game()
-            else:
-                handle_key(game, key_name)
+if __name__ == "__main__":
+    if not start_screen():
+        pygame.quit()
+        raise SystemExit
+    game = new_game()
+    clock = pygame.time.Clock()
+    end_timer = 0
 
-    draw(screen, game)
-    clock.tick(60)
-
-pygame.quit()
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                raise SystemExit
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    raise SystemExit
+                handle_key(game, pygame.key.name(event.key).upper())
+        draw(screen, game)
+        if game["state"] != "playing":
+            end_timer += 1
+            if end_timer >= 90:
+                end_screen(game)
+                pygame.quit()
+                raise SystemExit
+        clock.tick(60)

@@ -1,13 +1,13 @@
 import pygame
 import sys
-import subprocess
+import importlib.util
 import os
 
 os.environ["SDL_RENDER_SCALE_QUALITY"] = "0"
 pygame.init()
 
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-pygame.display.set_caption("Cat Games")
+pygame.display.set_caption("Cat Mini Games")
 
 W, H = screen.get_size()
 BASE_W, BASE_H = 800, 600
@@ -61,12 +61,21 @@ def draw_button(label, rect, colour, hover_colour, text_colour, hovered):
 
 
 def launch(script):
-    pygame.display.iconify()
-    subprocess.run([sys.executable, os.path.join(BASE, script)])
+    name = script.replace('.py', '')
+    _orig_set_mode = pygame.display.set_mode
+    pygame.display.set_mode = lambda *a, **kw: screen
+    try:
+        if name not in sys.modules:
+            spec = importlib.util.spec_from_file_location(name, os.path.join(BASE, script))
+            mod = importlib.util.module_from_spec(spec)
+            sys.modules[name] = mod
+            spec.loader.exec_module(mod)
+        mod = sys.modules[name]
+    finally:
+        pygame.display.set_mode = _orig_set_mode
+    mod.run(screen, clock)
     pygame.event.clear()
-    screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     pygame.display.set_caption("Cat Games")
-    return screen
 
 
 input_score = int(sys.argv[1]) if len(sys.argv) > 1 else None
@@ -92,7 +101,10 @@ while True:
     if launch_script == "quit":
         break
     elif launch_script:
-        screen = launch(launch_script)
+        try:
+            launch(launch_script)
+        except SystemExit:
+            break
         if input_score is not None:
             _, _, _, _, _, difficulty = GAMES[selected_idx]
             print(input_score * effect(difficulty))

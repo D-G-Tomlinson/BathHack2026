@@ -216,7 +216,7 @@ def title_screen():
         mx, my = pygame.mouse.get_pos()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit(); sys.exit()
+                sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN and btn.collidepoint(mx, my):
                 return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
@@ -238,7 +238,7 @@ def result_screen(correct: bool, word: str, hint: str):
         mx, my = pygame.mouse.get_pos()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit(); sys.exit()
+                sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN and btn.collidepoint(mx, my):
                 return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
@@ -264,7 +264,7 @@ def end_screen(score: int, total: int):
         mx, my = pygame.mouse.get_pos()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit(); sys.exit()
+                sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN and btn.collidepoint(mx, my):
                 return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
@@ -297,7 +297,7 @@ def play_round(word: str, hint: str, score: int, round_num: int, lives: int):
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit(); sys.exit()
+                sys.exit()
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN and typed:
@@ -361,8 +361,15 @@ def main():
         if lives == 0:
             break
     end_screen(score, TOTAL_ROUNDS)
-    pygame.quit()
-    sys.exit()
+
+
+def run(scr, clk):
+    global screen, clock
+    screen = scr
+    clock = clk
+    main()
+
 
 if __name__ == "__main__":
     main()
+    pygame.quit()
