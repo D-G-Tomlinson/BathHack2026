@@ -98,7 +98,7 @@ def join_game():
     game.player2Name = userid
     return "Success",200
 
-@app.patch('make_move')
+@app.patch('/make_move')
 def make_move():
     # code, userid, new_board, new_rack, new_bag, new_score
     code = request.args.get("code")
