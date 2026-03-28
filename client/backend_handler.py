@@ -28,11 +28,14 @@ def new_game(userid):
 def join_game(code,userid):
     requests.patch(URL+'join_game', params={"code":code,"userid":userid})
     
-def make_move(code,userid, new_board, new_rack, new_bag, score_change):
+def make_move(code,userid, new_board, new_rack, new_bag, new_score):
     requests.patch(URL + 'make_move',params={
         "code":code,
         "userid":userid,
         "new_board":new_board,
         "new_rack":new_rack,
         "new_bag":new_bag,
-        "score_change":score_change})
+        "new_score":new_score})
+
+def end_game(code, is_quit):
+    requests.post(URL + 'end_game',params={"code":code, "quit":str(is_quit)})

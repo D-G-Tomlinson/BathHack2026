@@ -35,6 +35,7 @@ class Game:
         self.pieces = Pieces()
         self.player1Name = p1
         self.player2Name = None
+        self.cancelled = 0
     def toJSON(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
 
@@ -69,7 +70,10 @@ def get_game_codes():
 def get_game():
     code = request.args.get('code')
     if code in games:
-        return games[code].toJSON(),200
+        game = games[code]
+        if game.cancelled!=0:
+            games.pop(code)
+        return game.toJSON(),200
     else:
         abort(403, description="that game: " + code +" doesn't exist")
 
@@ -97,7 +101,7 @@ def join_game():
 
 @app.patch('make_move')
 def make_move():
-    # code, userid, new_board, new_rack, new_bag, change in score
+    # code, userid, new_board, new_rack, new_bag, new_score
     code = request.args.get("code")
     if code not in games:
         abort(403, description="code is invalid")
@@ -106,13 +110,13 @@ def make_move():
     userid = str(request.args.get("userid"))
     if (isP1 and not(userid==game.player1Name)) or (not isP1 and not(userid==game.player2Name)):
         abort(403, description="userid is invalid")
-    score_change = request.args.get("score_change")
-    if score_change.isdecimal() and int(score_change) > 0:
+    new_score = request.args.get("new_score")
+    if new_score.isdecimal() and int(new_score) > 0:
         (a,b) = game.scores
         if isP1:
-            a = a + score_change
+            a = new_score
         else:
-            b = b + score_change
+            b = new_score
         game.scores = (a,b)
     else:
         abort(403, description="score_change is invalid")
@@ -126,4 +130,18 @@ def make_move():
     else:
         game.pieces.p2 = new_rack
     game.player1Next = not isP1
+    return "Success",200
+
+@app.delete('/end_game')
+def end_game():
+    code = request.args.get("code")
+    if code not in games:
+        abort(403, description="code is invalid")
+    quit =  request.args.get("quit")
+    if quit == "True":
+        games[code].cancelled = 2
+    elif quit == "False":
+        games[code].cancelled = 1
+    else:
+        abort(403, description="quit is not valid")
     return "Success",200
