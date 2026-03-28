@@ -26,8 +26,9 @@ screen = pg.display.set_mode((WIDTH, HEIGHT), pg.FULLSCREEN | pg.SCALED)
 
 import states.MainMenu as MM
 import states.NewGame as NG
+import states.Lobby as LB
 
-states = {"main_menu": MM.functions,"new_game": NG.functions}
+states = {"main_menu": MM.functions,"new_game": NG.functions, "lobby": LB.functions}
 state = "main_menu"
 
 def update(state):

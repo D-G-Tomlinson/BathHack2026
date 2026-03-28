@@ -63,7 +63,7 @@ def delete_game():
 
 @app.get('/game_codes')
 def get_game_codes():
-    return (jsonify(games.keys()),200)
+    return (jsonify(list(games.keys())),200)
 
 @app.get('/game')
 def get_game():
