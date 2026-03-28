@@ -1,20 +1,17 @@
 import pygame
 
-# Initialize pygame
 pygame.init()
 
-# Create window
-screen = pygame.display.set_mode((800, 600))
-
-# Set window title
+screen = pygame.display.set_mode((800, 600), pygame.FULLSCREEN | pygame.SCALED)
 pygame.display.set_caption("Maths Mini Game")
 
-# Main loop (keeps window open)
+# TODO: actually build this
+# placeholder for now so the menu doesn't crash
+
 running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-# Quit pygame
 pygame.quit()
