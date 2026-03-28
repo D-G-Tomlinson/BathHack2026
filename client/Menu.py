@@ -60,7 +60,7 @@ def draw_button(label, rect, colour, hover_colour, text_colour, hovered):
                     rect.y + (rect.h - t.get_height()) // 2))
 
 
-def launch(script):
+def _load_mod(script):
     name = script.replace('.py', '')
     _orig_set_mode = pygame.display.set_mode
     pygame.display.set_mode = lambda *a, **kw: screen
@@ -70,26 +70,44 @@ def launch(script):
             mod = importlib.util.module_from_spec(spec)
             sys.modules[name] = mod
             spec.loader.exec_module(mod)
-        mod = sys.modules[name]
+        return sys.modules[name]
     finally:
         pygame.display.set_mode = _orig_set_mode
-    mod.run(screen, clock)
-    pygame.event.clear()
-    pygame.display.set_caption("Cat Games")
 
 
 input_score = int(sys.argv[1]) if len(sys.argv) > 1 else None
 
 clock = pygame.time.Clock()
 selected_idx = None
+active_game = None  # current game generator
 
 while True:
     mx, my = pygame.mouse.get_pos()
-    launch_script = None
+    events = pygame.event.get()
 
-    for event in pygame.event.get():
+    # Always handle hard quit
+    for event in events:
         if event.type == pygame.QUIT:
-            launch_script = "quit"
+            pygame.quit()
+            sys.exit()
+
+    if active_game is not None:
+        try:
+            active_game.send(events)
+        except StopIteration:
+            active_game = None
+            pygame.event.clear()
+            pygame.display.set_caption("Cat Games")
+            if input_score is not None and selected_idx is not None:
+                _, _, _, _, _, difficulty = GAMES[selected_idx]
+                print(input_score * effect(difficulty))
+                break
+        clock.tick(60)
+        continue
+
+    # Menu logic
+    launch_script = None
+    for event in events:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             for i, rect in enumerate(BUTTONS):
                 if rect.collidepoint(mx, my):
@@ -101,25 +119,17 @@ while True:
     if launch_script == "quit":
         break
     elif launch_script:
-        try:
-            launch(launch_script)
-        except SystemExit:
-            break
-        if input_score is not None:
-            _, _, _, _, _, difficulty = GAMES[selected_idx]
-            print(input_score * effect(difficulty))
-            break
-
-    screen.fill(BG)
-
-    t = font_title.render("Cat Games", True, BLACK)
-    screen.blit(t, (W // 2 - t.get_width() // 2, py(90)))
-
-    for i, (label, _, col, hcol, tcol, *_) in enumerate(GAMES):
-        draw_button(label, BUTTONS[i], col, hcol, tcol, BUTTONS[i].collidepoint(mx, my))
-    draw_button("Quit", BTN_QUIT, *QUIT_COLOURS, BTN_QUIT.collidepoint(mx, my))
-
-    pygame.display.flip()
-    clock.tick(60)
+        mod = _load_mod(launch_script)
+        active_game = mod.run_gen(screen, clock)
+        next(active_game)
+    else:
+        screen.fill(BG)
+        t = font_title.render("Cat Games", True, BLACK)
+        screen.blit(t, (W // 2 - t.get_width() // 2, py(90)))
+        for i, (label, _, col, hcol, tcol, *_) in enumerate(GAMES):
+            draw_button(label, BUTTONS[i], col, hcol, tcol, BUTTONS[i].collidepoint(mx, my))
+        draw_button("Quit", BTN_QUIT, *QUIT_COLOURS, BTN_QUIT.collidepoint(mx, my))
+        pygame.display.flip()
+        clock.tick(60)
 
 pygame.quit()

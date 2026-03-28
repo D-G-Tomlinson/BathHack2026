@@ -92,9 +92,10 @@ def start_screen():
     btn_rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
 
     while True:
+        events = yield
         hovered = btn_rect.collidepoint(pygame.mouse.get_pos())
 
-        for event in pygame.event.get():
+        for event in events:
             if event.type == pygame.QUIT:
                 return False
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -139,7 +140,6 @@ def start_screen():
         screen.blit(label, (W // 2 - label.get_width() // 2, btn_y + btn_h // 2 - label.get_height() // 2))
 
         pygame.display.flip()
-        pygame.time.Clock().tick(60)
 
 
 def end_screen(game):
@@ -149,7 +149,8 @@ def end_screen(game):
     btn_back = pygame.Rect(W // 2 - sx(77), py(480), sx(155), sx(52))
 
     while True:
-        for event in pygame.event.get():
+        events = yield
+        for event in events:
             if event.type == pygame.QUIT:
                 return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -188,7 +189,6 @@ def end_screen(game):
         screen.blit(font_msg.render("Back", True, BLACK), font_msg.render("Back", True, BLACK).get_rect(center=btn_back.center))
 
         pygame.display.flip()
-        pygame.time.Clock().tick(60)
 
 
 def new_game():
@@ -341,17 +341,18 @@ def draw(surface, game):
     pygame.display.flip()
 
 
-def run(scr, clk=None):
+def run_gen(scr, clk=None):
     global screen, clock
     screen = scr
     clock = clk or pygame.time.Clock()
-    if not start_screen():
+    if not (yield from start_screen()):
         return
     game = new_game()
     end_timer = 0
 
     while True:
-        for event in pygame.event.get():
+        events = yield
+        for event in events:
             if event.type == pygame.QUIT:
                 return
             elif event.type == pygame.KEYDOWN:
@@ -362,34 +363,18 @@ def run(scr, clk=None):
         if game["state"] != "playing":
             end_timer += 1
             if end_timer >= 90:
-                end_screen(game)
+                yield from end_screen(game)
                 return
-        clock.tick(60)
 
 
 if __name__ == "__main__":
-    if not start_screen():
-        pygame.quit()
-        raise SystemExit
-    game = new_game()
     clock = pygame.time.Clock()
-    end_timer = 0
-
+    gen = run_gen(screen, clock)
+    next(gen)
     while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                raise SystemExit
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
-                    raise SystemExit
-                handle_key(game, pygame.key.name(event.key).upper())
-        draw(screen, game)
-        if game["state"] != "playing":
-            end_timer += 1
-            if end_timer >= 90:
-                end_screen(game)
-                pygame.quit()
-                raise SystemExit
+        try:
+            gen.send(pygame.event.get())
+        except StopIteration:
+            break
         clock.tick(60)
+    pygame.quit()

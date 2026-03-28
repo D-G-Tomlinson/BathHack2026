@@ -3,7 +3,6 @@ import math
 import os
 import random
 import subprocess
-import sys
 import threading
 
 import pygame
@@ -213,10 +212,11 @@ def draw_input_box(typed: str, active: bool, shake: int = 0):
 def title_screen():
     btn = pygame.Rect(px(300), py(460), sx(200), sx(60))
     while True:
+        events = yield
         mx, my = pygame.mouse.get_pos()
-        for event in pygame.event.get():
+        for event in events:
             if event.type == pygame.QUIT:
-                sys.exit()
+                return
             if event.type == pygame.MOUSEBUTTONDOWN and btn.collidepoint(mx, my):
                 return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
@@ -228,17 +228,17 @@ def title_screen():
         blit_cat(0, W // 2, py(300))
         draw_button(btn, "Play!", GREEN, btn.collidepoint(mx, my))
         pygame.display.flip()
-        clock.tick(FPS)
 
 
 def result_screen(correct: bool, word: str, hint: str):
     btn = pygame.Rect(px(300), py(490), sx(200), sx(60))
     cat_idx = 1 if correct else 2
     while True:
+        events = yield
         mx, my = pygame.mouse.get_pos()
-        for event in pygame.event.get():
+        for event in events:
             if event.type == pygame.QUIT:
-                sys.exit()
+                return
             if event.type == pygame.MOUSEBUTTONDOWN and btn.collidepoint(mx, my):
                 return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
@@ -254,17 +254,17 @@ def result_screen(correct: bool, word: str, hint: str):
             draw_text(f"The word was:  {word.upper()}", font_med, TAN, W // 2, py(418))
         draw_button(btn, "Next >>", GOLD, btn.collidepoint(mx, my))
         pygame.display.flip()
-        clock.tick(FPS)
 
 
 def end_screen(score: int, total: int):
     btn = pygame.Rect(px(290), py(490), sx(220), sx(60))
     cat_idx = 1 if score >= total // 2 else 2
     while True:
+        events = yield
         mx, my = pygame.mouse.get_pos()
-        for event in pygame.event.get():
+        for event in events:
             if event.type == pygame.QUIT:
-                sys.exit()
+                return
             if event.type == pygame.MOUSEBUTTONDOWN and btn.collidepoint(mx, my):
                 return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
@@ -283,7 +283,6 @@ def end_screen(score: int, total: int):
         draw_text(msg, font_small, col, W // 2, py(456))
         draw_button(btn, "Exit", GOLD, btn.collidepoint(mx, my))
         pygame.display.flip()
-        clock.tick(FPS)
 
 
 def play_round(word: str, hint: str, score: int, round_num: int, lives: int):
@@ -295,15 +294,16 @@ def play_round(word: str, hint: str, score: int, round_num: int, lives: int):
     speak(word)
 
     while True:
-        for event in pygame.event.get():
+        events = yield
+        for event in events:
             if event.type == pygame.QUIT:
-                sys.exit()
+                return None, 0
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN and typed:
                     if typed.lower() == word:
                         SND_CORRECT.play()
-                        result_screen(True, word, hint)
+                        yield from result_screen(True, word, hint)
                         return True, lives
                     else:
                         lives -= 1
@@ -314,7 +314,7 @@ def play_round(word: str, hint: str, score: int, round_num: int, lives: int):
                         msg_timer = 90
                         typed = ""
                         if lives == 0:
-                            result_screen(False, word, hint)
+                            yield from result_screen(False, word, hint)
                             return False, 0
 
                 elif event.key == pygame.K_BACKSPACE:
@@ -346,30 +346,38 @@ def play_round(word: str, hint: str, score: int, round_num: int, lives: int):
             msg_timer -= 1
 
         pygame.display.flip()
-        clock.tick(FPS)
 
 
 def main():
-    title_screen()
+    yield from title_screen()
     score = 0
     lives = 3
     pool = random.sample(WORDS, min(TOTAL_ROUNDS, len(WORDS)))
     for i, (word, hint) in enumerate(pool, 1):
-        correct, lives = play_round(word, hint, score, i, lives)
+        correct, lives = yield from play_round(word, hint, score, i, lives)
+        if correct is None:
+            return
         if correct:
             score += 1
         if lives == 0:
             break
-    end_screen(score, TOTAL_ROUNDS)
+    yield from end_screen(score, TOTAL_ROUNDS)
 
 
-def run(scr, clk):
+def run_gen(scr, clk):
     global screen, clock
     screen = scr
     clock = clk
-    main()
+    yield from main()
 
 
 if __name__ == "__main__":
-    main()
+    gen = run_gen(screen, clock)
+    next(gen)
+    while True:
+        try:
+            gen.send(pygame.event.get())
+        except StopIteration:
+            break
+        clock.tick(FPS)
     pygame.quit()

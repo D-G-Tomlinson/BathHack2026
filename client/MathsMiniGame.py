@@ -138,10 +138,11 @@ def start_screen():
     btn_rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
 
     while True:
+        events = yield
         mx, my = pygame.mouse.get_pos()
         hovered = btn_rect.collidepoint(mx, my)
 
-        for event in pygame.event.get():
+        for event in events:
             if event.type == pygame.QUIT:
                 return False
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -186,7 +187,6 @@ def start_screen():
         screen.blit(play_label, (W // 2 - play_label.get_width() // 2, btn_y + btn_h // 2 - play_label.get_height() // 2))
 
         pygame.display.flip()
-        clock.tick(60)
 
 
 def run_game():
@@ -197,9 +197,10 @@ def run_game():
     picked = None
 
     while True:
+        events = yield
         now = pygame.time.get_ticks()
 
-        for event in pygame.event.get():
+        for event in events:
             if event.type == pygame.QUIT:
                 return score
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -275,15 +276,15 @@ def run_game():
             draw_ans_tile(screen, opts[i], tile_x, ANS_Y, c)
 
         pygame.display.flip()
-        clock.tick(60)
 
 
 def end_screen(score):
     btn_back = pygame.Rect(W // 2 - sx(75), py(354), sx(150), sx(48))
 
     while True:
+        events = yield
         mx, my = pygame.mouse.get_pos()
-        for event in pygame.event.get():
+        for event in events:
             if event.type == pygame.QUIT:
                 return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -306,21 +307,26 @@ def end_screen(score):
         screen.blit(bk_lbl, bk_lbl.get_rect(center=btn_back.center))
 
         pygame.display.flip()
-        clock.tick(60)
 
 
-def run(scr, clk):
+def run_gen(scr, clk):
     global screen, clock
     screen = scr
     clock = clk
-    if start_screen():
-        end_screen(run_game())
+    if (yield from start_screen()):
+        yield from end_screen((yield from run_game()))
 
 
 if __name__ == "__main__":
     try:
-        if start_screen():
-            end_screen(run_game())
+        gen = run_gen(screen, clock)
+        next(gen)
+        while True:
+            try:
+                gen.send(pygame.event.get())
+            except StopIteration:
+                break
+            clock.tick(60)
     except Exception as e:
         import traceback
         traceback.print_exc()

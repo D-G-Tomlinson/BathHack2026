@@ -1,7 +1,6 @@
 import os
 import pygame
 import random
-import sys
 import math
 from collections import Counter
 
@@ -288,10 +287,11 @@ def start_screen():
     btn_rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
 
     while True:
+        events = yield
         mx, my = pygame.mouse.get_pos()
         hovered = btn_rect.collidepoint(mx, my)
 
-        for event in pygame.event.get():
+        for event in events:
             if event.type == pygame.QUIT:
                 return False
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -336,7 +336,6 @@ def start_screen():
         screen.blit(label, (W // 2 - label.get_width() // 2, btn_y + btn_h // 2 - label.get_height() // 2))
 
         pygame.display.flip()
-        pygame.time.Clock().tick(60)
 
 
 def draw_mistake_pips(surf, mistakes, cx, y):
@@ -357,14 +356,15 @@ def end_screen(game):
     btn_quit = pygame.Rect(W // 2 - sx(82), py(445), sx(165), sx(48))
 
     while True:
-        for event in pygame.event.get():
+        events = yield
+        for event in events:
             if event.type == pygame.QUIT:
-                sys.exit()
+                return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                sys.exit()
+                return
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if btn_quit.collidepoint(event.pos):
-                    sys.exit()
+                    return
 
         screen.fill(BG)
         if _ox > 40:
@@ -393,18 +393,16 @@ def end_screen(game):
         draw_btn(screen, "Quit", btn_quit, (180, 60, 60), WHITE, hover_bg=(140, 40, 40))
 
         pygame.display.flip()
-        pygame.time.Clock().tick(60)
 
 
 def main():
-    if not start_screen():
+    if not (yield from start_screen()):
         return
-    clock = pygame.time.Clock()
     game  = Game()
     end_delay = 0
 
     while True:
-        clock.tick(60)
+        events = yield
 
         btn_y    = GRID_Y + 4 * ROW_H + sx(18)
         btn_w    = sx(100)
@@ -414,9 +412,9 @@ def main():
         btn_hint = pygame.Rect(W // 2 + sx(5),   btn_y, btn_w, btn_h)
         btn_sub  = pygame.Rect(W // 2 + sx(115), btn_y, btn_w, btn_h)
 
-        for event in pygame.event.get():
+        for event in events:
             if event.type == pygame.QUIT:
-                sys.exit()
+                return
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return
 
@@ -510,14 +508,24 @@ def main():
             end_delay += 1
             if end_delay >= 90:
                 pygame.event.clear()
-                end_screen(game)
+                yield from end_screen(game)
+                return
 
 
-def run(scr, clk=None):
+def run_gen(scr, clk=None):
     global screen
     screen = scr
-    main()
+    yield from main()
 
 
 if __name__ == "__main__":
-    main()
+    clock = pygame.time.Clock()
+    gen = run_gen(screen)
+    next(gen)
+    while True:
+        try:
+            gen.send(pygame.event.get())
+        except StopIteration:
+            break
+        clock.tick(60)
+    pygame.quit()
