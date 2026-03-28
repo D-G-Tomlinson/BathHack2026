@@ -24,7 +24,12 @@ join_text = TITLE_FONT.render("Join Game", True, BLUE)
 join_rect = title_text.get_rect(midtop=(width//2,int(height*0.7)))
 
 def update(state, events):
-    pass
+    for event in events:
+        if event.type==pg.MOUSEBUTTONDOWN:
+            if new_rect.collidepoint(event.pos):
+                return "new_game"
+            elif join_rect.collidepoint(event.pos):
+                return "join_game"
 
 def draw(state,screen):
     screen.blit(title_text,title_rect)

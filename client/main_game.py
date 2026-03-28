@@ -12,17 +12,22 @@ pg.mixer.init()
 WIDTH, HEIGHT = 700, 360
 
 class GameState:
-    def __init__(self, code, userid):
+    def __init__(self):
+        self.code = None
+        self.userid = None
+        self.effect = None
+    def update(self, code, userid):
         self.code = code
         self.userid = userid
-gameState = None
+gameState = GameState()
 
 WIDTH, HEIGHT = 800, 600
 screen = pg.display.set_mode((WIDTH, HEIGHT), pg.FULLSCREEN | pg.SCALED)
 
 import states.MainMenu as MM
+import states.NewGame as NG
 
-states = {"main_menu": MM.functions}
+states = {"main_menu": MM.functions,"new_game": NG.functions}
 state = "main_menu"
 
 def update(state):
