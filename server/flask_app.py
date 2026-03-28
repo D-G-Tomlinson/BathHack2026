@@ -94,3 +94,36 @@ def join_game():
         abort(403, description="userid is already taken")
     game.player2Name = userid
     return "Success",200
+
+@app.patch('make_move')
+def make_move():
+    # code, userid, new_board, new_rack, new_bag, change in score
+    code = request.args.get("code")
+    if code not in games:
+        abort(403, description="code is invalid")
+    game = games[code]
+    isP1 = game.player1Next
+    userid = str(request.args.get("userid"))
+    if (isP1 and not(userid==game.player1Name)) or (not isP1 and not(userid==game.player2Name)):
+        abort(403, description="userid is invalid")
+    score_change = request.args.get("score_change")
+    if score_change.isdecimal() and int(score_change) > 0:
+        (a,b) = game.scores
+        if isP1:
+            a = a + score_change
+        else:
+            b = b + score_change
+        game.scores = (a,b)
+    else:
+        abort(403, description="score_change is invalid")
+    new_board = request.args.get("new_board")
+    new_rack = request.args.get("new_rack")
+    new_bag = request.args.get("new_bag")
+    game.board = new_board
+    game.pieces.bag = new_bag
+    if isP1:
+        game.pieces.p1 = new_rack
+    else:
+        game.pieces.p2 = new_rack
+    game.player1Next = not isP1
+    return "Success",200
