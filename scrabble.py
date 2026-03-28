@@ -23,6 +23,8 @@ import backend_handler as bh
 BOARD_SIZE = 10
 RACK_SIZE  = 7
 CENTER     = (4, 4)   # (row, col) — first word must cover this
+BONUS_SQUARES = {(1, 2), (3, 7), (7, 1), (8, 8)}
+
 
 # letter → (count in bag, point value)
 TILE_DATA: dict[str, tuple[int, int]] = {
@@ -89,7 +91,12 @@ class Board:
             for c in range(BOARD_SIZE):
                 cell = self.grid[r][c]
                 if cell is None:
-                    symbol = "*" if (r == cr and c == cc) else "."
+                    if (r == cr and c == cc):
+                        symbol = "*"
+                    elif (r, c) in BONUS_SQUARES:
+                        symbol = "+"
+                    else:
+                        symbol = "."
                     print(f" {symbol} ", end="")
                 else:
                     print(f" {cell.letter} ", end="")
@@ -296,7 +303,10 @@ class ScrabbleGame:
             self.board.load_from_list(raw_board)
         # else board is still all-None (start of game), which is correct
 
-        self.board.first_move_done = state.get("first_move_done", False)
+        self.board.first_move_done = any(self.board.grid[r][c] is not None
+            for r in range(BOARD_SIZE)
+            for c in range(BOARD_SIZE)
+        )
 
         # ── Bag ────────────────────────────────────────────────────────
         bag_raw = state["pieces"]["bag"]
@@ -308,8 +318,8 @@ class ScrabbleGame:
 
         # ── Scores ─────────────────────────────────────────────────────
         scores = state["scores"]
-        self.me.score       = scores[0] if self.is_player1 else scores[1]
-        self.opponent_score = scores[1] if self.is_player1 else scores[0]
+        self.me.score       = int(scores[0] if self.is_player1 else scores[1])
+        self.opponent_score = int(scores[1] if self.is_player1 else scores[0])
 
         # ── Names ──────────────────────────────────────────────────────
         self.opponent_name = (
@@ -500,12 +510,18 @@ class ScrabbleGame:
         New cells → look up TILE_DATA.
         """
         total = 0
+        bonus = 0
         for i, (r, c) in enumerate(positions):
             existing = self.board.get(r, c)
             if existing:
                 total += existing.points
             else:
                 total += TILE_DATA.get(word[i], (0, 0))[1]
+            if (r, c) in BONUS_SQUARES:
+                bonus += 2
+        if bonus:
+            print(f"  ⭐ Bonus square! +{bonus} extra pts")
+        return total + bonus
         return total
 
     # ════════════════════════════════════════
