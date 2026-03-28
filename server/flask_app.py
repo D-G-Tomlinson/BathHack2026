@@ -110,7 +110,7 @@ def make_move():
     if (isP1 and not(userid==game.player1Name)) or (not isP1 and not(userid==game.player2Name)):
         abort(403, description="userid is invalid")
     new_score = request.args.get("new_score")
-    if new_score.isdecimal() and int(new_score) > 0:
+    if new_score.isdecimal() and int(new_score) >= 0:
         (a,b) = game.scores
         if isP1:
             a = new_score
