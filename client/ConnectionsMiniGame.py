@@ -354,17 +354,17 @@ def end_screen(game):
     won = game.state == "won"
     cat_img = cat_tabby if won else cat_sleeping
 
-    btn_back = pygame.Rect(W // 2 - sx(82), py(445), sx(165), sx(48))
+    btn_quit = pygame.Rect(W // 2 - sx(82), py(445), sx(165), sx(48))
 
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return
+                sys.exit()
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                return
+                sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if btn_back.collidepoint(event.pos):
-                    return
+                if btn_quit.collidepoint(event.pos):
+                    sys.exit()
 
         screen.fill(BG)
         if _ox > 40:
@@ -378,7 +378,7 @@ def end_screen(game):
         rounded_rect(screen, GREY, card, r=sx(14), border=sx(2), bcol=GREY)
 
         msg = "Purrfect! You solved it all!" if won else "Game over! Better luck next time!"
-        col = CAT_COLOURS[0] if won else (180, 60, 60)
+        col = DARK if won else (180, 60, 60)
         t = font_title.render(msg, True, col)
         screen.blit(t, (W // 2 - t.get_width() // 2, card.y + sx(30)))
 
@@ -390,7 +390,7 @@ def end_screen(game):
             s = font_sub.render(line, True, DARK)
             screen.blit(s, (W // 2 - s.get_width() // 2, card.y + sx(105) + i * sx(40)))
 
-        draw_btn(screen, "Back", btn_back, LIGHT_GREY, BLACK, hover_bg=GREY)
+        draw_btn(screen, "Quit", btn_quit, (180, 60, 60), WHITE, hover_bg=(140, 40, 40))
 
         pygame.display.flip()
         pygame.time.Clock().tick(60)
@@ -511,7 +511,6 @@ def main():
             if end_delay >= 90:
                 pygame.event.clear()
                 end_screen(game)
-                return
 
 
 def run(scr, clk=None):
