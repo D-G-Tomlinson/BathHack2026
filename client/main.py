@@ -1,20 +1,3 @@
-"""
-main.py — User-Facing Entry Point
-===================================
-Run this file on each laptop to play Scrabble.
- 
-  python main.py
- 
-You will be asked to:
-  1. Enter your name
-  2. Create a new game OR join one with a code
- 
-Files needed in the same folder:
-  main.py             ← this file  (you are here)
-  scrabble.py         ← all game logic
-  backend_handler.py  ← all server communication
-"""
- 
 import time
 import backend_handler as bh
 from scrabble import ScrabbleGame
@@ -49,7 +32,6 @@ def rules() -> None:
  
  
 def _create_game(my_name: str) -> tuple:
-    """Player 1: create game on server, wait for Player 2 to join."""
     print("  Creating game on server...")
     code = bh.new_game(my_name)
  
@@ -74,7 +56,6 @@ def _create_game(my_name: str) -> tuple:
  
  
 def _join_game(my_name: str) -> tuple:
-    """Player 2: enter a code and join an existing game."""
     while True:
         code = input("  Enter game code: ").strip()
         if not code:
@@ -99,13 +80,8 @@ def _join_game(my_name: str) -> tuple:
  
  
 def setup() -> tuple:
-    """
-    Full pre-game setup.
-    Returns (my_name, code, is_player1).
-    """
     banner()
  
-    # Check server
     try:
         response = bh.get()
         print(f"  Server: {response}")
