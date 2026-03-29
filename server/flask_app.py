@@ -3,7 +3,7 @@ import random
 import json
 
 BOARD_SIZE = 10
-DEFAULT_BAG = {'a':9,'b':2,'c':2,'d':4,'e':12,'f':2,'g':3,'h':2,'i':9,'j':1,'k':1,'l':9,'m':2,'n':6,'o':8,'p':2,'q':1,'r':6,'s':4,'t':6,'u':4,'v':2,'w':2,'x':1,'y':2,'z':1}
+DEFAULT_BAG = {'a':9,'b':2,'c':2,'d':4,'e':12,'f':2,'g':3,'h':2,'i':9,'j':1,'k':1,'l':9,'m':2,'n':6,'o':8,'p':2,'q':1,'r':6,'s':4,'t':6,'u':4,'v':2,'w':2,'x':1,'y':2,'z':1,"blank":2}
 START_RACK_SIZE = 7
 
 class Pieces:
@@ -13,12 +13,12 @@ class Pieces:
             temp += key*value
         self.bag = list(temp)
         random.shuffle(self.bag)
-        self.p1 = ""
+        self.p1 = []
         for _ in range(START_RACK_SIZE):
-            self.p1 += self.bag.pop()
-        self.p2 = ""
+            self.p1.append(self.bag.pop())
+        self.p2 = []
         for _ in range(START_RACK_SIZE):
-            self.p2 += self.bag.pop()
+            self.p2.append(self.bag.pop())
 
 app = Flask(__name__)
 
@@ -30,7 +30,7 @@ class Game:
         self.scores=(0,0)
         self.board=[]
         for _ in range(BOARD_SIZE):
-            self.board.append([])
+            self.board.append([None]*BOARD_SIZE)
         self.pieces = Pieces()
         self.player1Name = p1
         self.player2Name = None
@@ -63,7 +63,7 @@ def delete_game():
 
 @app.get('/game_codes')
 def get_game_codes():
-    return (jsonify(games.keys()),200)
+    return (jsonify(list(games.keys())),200)
 
 @app.get('/game')
 def get_game():
@@ -110,7 +110,7 @@ def make_move():
     if (isP1 and not(userid==game.player1Name)) or (not isP1 and not(userid==game.player2Name)):
         abort(403, description="userid is invalid")
     new_score = request.args.get("new_score")
-    if new_score.isdecimal() and int(new_score) > 0:
+    if new_score.isdecimal() and int(new_score) >= 0:
         (a,b) = game.scores
         if isP1:
             a = new_score
