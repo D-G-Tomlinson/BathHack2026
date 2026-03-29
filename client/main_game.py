@@ -4,7 +4,6 @@ import sys
 import traceback
 import time
 
-from pandas.core.interchange.from_dataframe import primitive_column_to_ndarray
 
 pg.init()
 pg.mixer.init()
@@ -13,23 +12,24 @@ WIDTH, HEIGHT = 700, 360
 
 class GameState:
     def __init__(self):
-        self.code = None
-        self.userid = None
+        self.code = ""
+        self.userid = ""
         self.effect = None
+        self.isPlayer1 = None
     def update(self, code, userid):
         self.code = code
         self.userid = userid
 gameState = GameState()
 
-WIDTH, HEIGHT = 800, 600
 screen = pg.display.set_mode((WIDTH, HEIGHT), pg.FULLSCREEN | pg.SCALED)
 
 import states.MainMenu as MM
 import states.NewGame as NG
 import states.Lobby as LB
 import states.JoinGame as JG
+import states.Board as BD
 
-states = {"main_menu": MM.functions,"new_game": NG.functions, "lobby": LB.functions,"join_game": JG.functions}
+states = {"main_menu": MM.functions,"new_game": NG.functions, "lobby": LB.functions,"join_game": JG.functions,"board": BD.functions}
 state = "main_menu"
 
 def update(state):
@@ -54,8 +54,11 @@ if __name__ == "__main__":
             if not (new_state is None):
                 if state != new_state:
                     states[new_state][2](gameState)
-                state = new_state
-            draw(state)
+                    state = new_state
+                else:
+                    draw(state)
+            else:
+                draw(state)
         except Exception as e:
 
             traceback.print_exc()

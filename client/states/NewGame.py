@@ -43,9 +43,6 @@ username_label_rect = username_label_text.get_rect(midright=(username_box.x - 10
 title_text = TITLE_FONT.render("Create New Game", True, BLACK)
 title_text_rect = title_text.get_rect(center=(width // 2, 60))
 
-back_button_rect = pg.Rect(10, 10, 100, 50)
-back_button_text = BUTTON_FONT.render("Back", True, BLACK)
-back_button_text_rect = back_button_text.get_rect(center=back_button_rect.center)
 
 button_rect = pg.Rect((width - 300) // 2, height - 110, 300, 60)
 button_text = BUTTON_FONT.render("Generate Join Code", True, BLACK)
@@ -73,10 +70,6 @@ def draw(game, screen):
         pg.mouse.get_pos()) else HOVER
     pg.draw.rect(screen, button_color_to_use, button_rect)
     screen.blit(button_text, button_text_rect)
-    # back button
-    button_color_to_use = WHITE if not back_button_rect.collidepoint(pg.mouse.get_pos()) else HOVER
-    pg.draw.rect(screen, button_color_to_use, back_button_rect)
-    screen.blit(back_button_text, back_button_text_rect)
 
 
 def update(game, events):
@@ -96,15 +89,15 @@ def update(game, events):
             if button_rect.collidepoint(event.pos) and game.userid.strip():
                 code = new_game(userid)
                 game.update(code,userid)
+                game.isPlayer1 = True
                 return "lobby"
-            elif back_button_rect.collidepoint(event.pos):
-                return "main_menu"
         elif event.type == pg.KEYDOWN and username_active:
             if event.key == pg.K_BACKSPACE:
                 userid = userid[:-1]
             elif event.key == pg.K_RETURN:
                 code = new_game(userid)
                 game.update(code,userid)
+                game.isPlayer1 = True
                 return "lobby"
             elif event.unicode and event.unicode.isprintable():
                 userid += event.unicode

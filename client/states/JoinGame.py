@@ -110,6 +110,7 @@ def update(game, events):
 
             if button_rect.collidepoint(event.pos) and game.userid.strip() and len(game_code_text) == 6:
                 join_game(game_code_text, game.userid)
+                game.isPlayer1 = False
                 game.code = game_code_text
                 return "board"
         elif event.type == pg.KEYDOWN:
@@ -127,6 +128,7 @@ def update(game, events):
                     active = USERNAME
                 elif event.key == pg.K_RETURN and game.userid.strip() and len(game_code_text) == 6:
                     join_game(game_code_text, game.userid)
+                    game.isPlayer1 = False
                     game.code = game_code_text
                     return "board"
                 elif event.unicode and event.unicode.isdigit() and len(game_code_text) < 6:
