@@ -113,9 +113,9 @@ def make_move():
     if new_score.isdecimal() and int(new_score) >= 0:
         (a,b) = game.scores
         if isP1:
-            a = new_score
+            a = int(new_score)
         else:
-            b = new_score
+            b = int(new_score)
         game.scores = (a,b)
     else:
         abort(403, description="score_change is invalid")
