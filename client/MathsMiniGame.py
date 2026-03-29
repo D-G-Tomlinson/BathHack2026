@@ -4,7 +4,7 @@ import os
 
 pygame.init()
 
-screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+screen = pygame.display.set_mode((0, 0), pygame.NOFRAME)
 pygame.display.set_caption("Scrabble Maths")
 clock = pygame.time.Clock()
 

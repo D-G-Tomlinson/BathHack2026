@@ -75,7 +75,7 @@ TOTAL_ROUNDS = 5
 os.environ["SDL_RENDER_SCALE_QUALITY"] = "0"
 pygame.mixer.pre_init(44100, -16, 1, 512)
 pygame.init()
-screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+screen = pygame.display.set_mode((0, 0), pygame.NOFRAME)
 pygame.display.set_caption("Meow Spelling!")
 clock = pygame.time.Clock()
 

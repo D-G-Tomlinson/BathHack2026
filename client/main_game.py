@@ -1,6 +1,6 @@
 import pygame as pg
 import sys
-
+import os
 import traceback
 import time
 
@@ -21,7 +21,8 @@ class GameState:
         self.userid = userid
 gameState = GameState()
 
-screen = pg.display.set_mode((WIDTH, HEIGHT), pg.FULLSCREEN)
+os.environ['SDL_VIDEO_WINDOW_POS'] = '0,0'
+screen = pg.display.set_mode((WIDTH, HEIGHT), pg.NOFRAME)
 
 import states.MainMenu as MM
 import states.NewGame as NG
@@ -36,11 +37,9 @@ def update(state):
     events = pg.event.get()
     for event in events:
         if event.type == pg.QUIT:
-            if not gameState is None:
-                pass # quit game
-            pg.quit() # possibly check for game and quit
+            pg.quit()
             sys.exit()
-    return states[state][0](gameState,events)
+    return states[state][0](gameState, events)
 
 def draw(state):
     screen.fill((0, 0, 0))
@@ -60,8 +59,5 @@ if __name__ == "__main__":
             else:
                 draw(state)
         except Exception as e:
-
             traceback.print_exc()
-            pg.quit() # possibly check for game and quit
-            sys.exit()
-
+            # don't quit on transient errors — only exit on fatal ones
