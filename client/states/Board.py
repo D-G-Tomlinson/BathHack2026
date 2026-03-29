@@ -42,9 +42,11 @@ play_error      = ""
 play_error_time = 0
 
 # button rects set each frame by draw_sidebar so update() can hit-test them
-_btn_h_rect    = None
-_btn_v_rect    = None
-_btn_play_rect = None
+_btn_h_rect         = None
+_btn_v_rect         = None
+_btn_play_rect      = None
+_btn_skip_rect      = None
+_btn_reshuffle_rect = None
 
 # ── circular-cropped waiting cat ──────────────────────────────────────
 _IMG_DIR   = os.path.join(os.path.dirname(__file__), "..", "Images", "Colours")
@@ -181,7 +183,7 @@ def _place_word(word, col, row, direction, is_p1):
     board = [list(r) for r in server_state["board"]]
     rack  = list(server_state["pieces"]["p1" if is_p1 else "p2"])
     bag   = list(server_state["pieces"]["bag"])
-    score = server_state["scores"][0 if is_p1 else 1]
+    score = int(server_state["scores"][0 if is_p1 else 1])
     word  = word.lower().strip()
 
     if not word:
@@ -242,7 +244,7 @@ def _do_play(game):
         else:
             multiplier = 1
 
-        old_score = server_state["scores"][0 if game.isPlayer1 else 1]
+        old_score = int(server_state["scores"][0 if game.isPlayer1 else 1])
         new_board, new_rack, new_bag, new_score = _place_word(
             input_guess, col, row, place_direction, game.isPlayer1)
         word_points = new_score - old_score
@@ -273,11 +275,58 @@ def _do_play(game):
         play_error_time = pg.time.get_ticks()
 
 
+def _do_skip(game):
+    global play_error, play_error_time, input_guess, selected_cell, last_time
+    try:
+        rack  = server_state["pieces"]["p1" if game.isPlayer1 else "p2"]
+        bag   = server_state["pieces"]["bag"]
+        board = server_state["board"]
+        score = server_state["scores"][0 if game.isPlayer1 else 1]
+        make_move(game.code, game.userid,
+                  json.dumps(board), json.dumps(rack), json.dumps(bag), score)
+        input_guess   = ""
+        selected_cell = None
+        play_error    = ""
+        last_time     = 0   # force immediate re-poll so turn flips
+    except Exception as e:
+        play_error      = f"Error: {e}"
+        play_error_time = pg.time.get_ticks()
+
+
+def _do_reshuffle(game):
+    global play_error, play_error_time, input_guess, selected_cell, last_time
+    try:
+        rack  = list(server_state["pieces"]["p1" if game.isPlayer1 else "p2"])
+        bag   = list(server_state["pieces"]["bag"])
+        board = server_state["board"]
+        score = server_state["scores"][0 if game.isPlayer1 else 1]
+        if not bag:
+            play_error      = "Bag is empty — can't reshuffle!"
+            play_error_time = pg.time.get_ticks()
+            return
+        bag  += rack
+        random.shuffle(bag)
+        new_rack = bag[:7]
+        new_bag  = bag[7:]
+        make_move(game.code, game.userid,
+                  json.dumps(board), json.dumps(new_rack), json.dumps(new_bag), score)
+        rack_key = "p1" if game.isPlayer1 else "p2"
+        server_state["pieces"][rack_key] = new_rack
+        server_state["pieces"]["bag"]    = new_bag
+        input_guess   = ""
+        selected_cell = None
+        play_error    = ""
+        last_time     = 0   # force immediate re-poll so turn flips
+    except Exception as e:
+        play_error      = f"Error: {e}"
+        play_error_time = pg.time.get_ticks()
+
+
 def update(game, events):
     global server_state, last_time, start_waiting
     global input_guess, drag, selected_cell, place_direction
     global play_error, play_error_time
-    global _btn_h_rect, _btn_v_rect, _btn_play_rect
+    global _btn_h_rect, _btn_v_rect, _btn_play_rect, _btn_skip_rect, _btn_reshuffle_rect
 
     now = pg.time.get_ticks()
     if now - last_time >= 1000 or server_state is None:
@@ -319,6 +368,10 @@ def update(game, events):
             # play button
             elif _btn_play_rect and _btn_play_rect.collidepoint(pos):
                 _do_play(game)
+            elif _btn_skip_rect and _btn_skip_rect.collidepoint(pos):
+                _do_skip(game)
+            elif _btn_reshuffle_rect and _btn_reshuffle_rect.collidepoint(pos):
+                _do_reshuffle(game)
 
         elif event.type == pg.KEYDOWN:
             if event.key == pg.K_BACKSPACE:
@@ -425,7 +478,7 @@ def draw(game, screen):
 
 
 def draw_sidebar(screen, game):
-    global _btn_h_rect, _btn_v_rect, _btn_play_rect
+    global _btn_h_rect, _btn_v_rect, _btn_play_rect, _btn_skip_rect, _btn_reshuffle_rect
 
     panel_x  = board_rect.right + 40
     panel_w  = width - panel_x - 30
@@ -507,11 +560,16 @@ def draw_sidebar(screen, game):
                border=BROWN, radius=12)
     ps = SCORE_FONT.render("Play Word", True, WHITE if ready else (130, 130, 130))
     screen.blit(ps, ps.get_rect(center=_btn_play_rect.center))
-    y += _btn_play_rect.height + 14
+    y += _btn_play_rect.height + 10
 
-    # ── hint ──────────────────────────────────────────────────────────
-    screen.blit(LABEL_FONT.render("Enter also submits", True, (160, 160, 160)),
-                LABEL_FONT.render("Enter also submits", True, (160, 160, 160)).get_rect(midtop=(panel_cx, y)))
+    # ── skip / reshuffle buttons ──────────────────────────────────────
+    _btn_skip_rect      = pg.Rect(panel_x, y, btn_w, int(height * 0.055))
+    _btn_reshuffle_rect = pg.Rect(panel_x + panel_w - btn_w, y, btn_w, int(height * 0.055))
+    for rect, label in ((_btn_skip_rect, "Skip Turn"), (_btn_reshuffle_rect, "Reshuffle")):
+        _draw_card(screen, rect, fill=WHITE, border=BROWN, radius=10)
+        ls = LABEL_FONT.render(label, True, BROWN)
+        screen.blit(ls, ls.get_rect(center=rect.center))
+    y += int(height * 0.055) + 14
 
     # ── deco cat ──────────────────────────────────────────────────────
     screen.blit(_side_cat, _side_cat.get_rect(midbottom=(panel_cx, height - int(height*0.05))))
