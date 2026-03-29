@@ -132,6 +132,10 @@ def start_screen():
             s = font_key.render(line, True, BLACK)
             screen.blit(s, (W // 2 - s.get_width() // 2, card_y + sx(24) + i * sx(40)))
 
+        # Bonus banner — sits just below the play button
+        bonus = font_msg.render("x3 SCORE BONUS!", True, GREEN)
+        screen.blit(bonus, (W // 2 - bonus.get_width() // 2, btn_y + btn_h + sx(8)))
+
         # Play button
         btn_col = GREEN if hovered else YELLOW
         pygame.draw.rect(screen, btn_col,    btn_rect, border_radius=sx(12))

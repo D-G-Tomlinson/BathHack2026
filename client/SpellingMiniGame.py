@@ -225,6 +225,7 @@ def title_screen():
         draw_bg()
         draw_text("Meow Spelling!", font_title, TAN, W // 2, py(60))
         draw_text("Read the clue and type the word!", font_small, BLACK, W // 2, py(108))
+        draw_text("x4 SCORE BONUS!", font_big, GREEN, W // 2, py(150))
         blit_cat(0, W // 2, py(300))
         draw_button(btn, "Play!", GREEN, btn.collidepoint(mx, my))
         pygame.display.flip()

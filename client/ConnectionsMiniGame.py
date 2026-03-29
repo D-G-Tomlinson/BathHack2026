@@ -313,6 +313,9 @@ def start_screen():
         title = font_title.render("Cat Connections!", True, CAT_COLOURS[3])
         screen.blit(title, (W // 2 - title.get_width() // 2, py(75)))
 
+        bonus = font_word.render("x6 SCORE BONUS!", True, CAT_COLOURS[3])
+        screen.blit(bonus, (W // 2 - bonus.get_width() // 2, py(118)))
+
         # Instructions card
         card_x, card_y, card_w, card_h = px(100), py(158), sx(600), sx(250)
         rounded_rect(screen, LIGHT_GREY, (card_x, card_y, card_w, card_h), r=sx(14))

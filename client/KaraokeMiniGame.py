@@ -99,6 +99,9 @@ def start_screen(screen, clock, cat_images):
         sub = font_sub.render("Karaoke Night!", True, RED)
         screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, HEIGHT // 5 + title.get_height() + 10))
 
+        bonus = font_sub.render("x2 SCORE BONUS!", True, YELLOW)
+        screen.blit(bonus, (WIDTH // 2 - bonus.get_width() // 2, HEIGHT // 5 + title.get_height() + sub.get_height() + 20))
+
         _draw_button(screen, "Start", btn_rect, font_btn)
         pygame.display.flip()
 

@@ -128,27 +128,30 @@ _cat_cell_img = pg.transform.smoothscale(
     (piece_width, piece_width)
 )
 
-def _launch_random_minigame(screen):
-    """Import a random minigame and run it via its run_gen generator until it exits."""
-    import sys
+# (module_name, multiplier) — order determines random selection
+MINIGAME_LIST = [
+    ("KaraokeMiniGame",    2),
+    ("WordleMiniGame",     3),
+    ("SpellingMiniGame",   4),
+    ("MathsMiniGame",      5),
+    ("ConnectionsMiniGame",6),
+]
+
+
+def _pick_minigame():
+    """Return a random (module_name, multiplier) pair."""
+    return random.choice(MINIGAME_LIST)
+
+
+def _run_specific_minigame(screen, module_name):
+    """Run the named minigame module via its run_gen generator until it exits."""
+    import sys, importlib
     _client_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if _client_dir not in sys.path:
         sys.path.insert(0, _client_dir)
-    import WordleMiniGame
-    import MathsMiniGame
-    import ConnectionsMiniGame
-    import SpellingMiniGame
-    import KaraokeMiniGame
-
-    minigames = [
-        WordleMiniGame.run_gen,
-        MathsMiniGame.run_gen,
-        ConnectionsMiniGame.run_gen,
-        SpellingMiniGame.run_gen,
-        KaraokeMiniGame.run_gen,
-    ]
+    mod = importlib.import_module(module_name)
     clock = pg.time.Clock()
-    gen = random.choice(minigames)(screen, clock)
+    gen = mod.run_gen(screen, clock)
     try:
         next(gen)
     except StopIteration:
@@ -226,16 +229,26 @@ def _do_play(game):
             c += dc
             r += dr
 
+        # Pre-select minigame so multiplier can be applied before pushing score
+        if hit_cat:
+            minigame_name, multiplier = _pick_minigame()
+        else:
+            multiplier = 1
+
+        old_score = server_state["scores"][0 if game.isPlayer1 else 1]
         new_board, new_rack, new_bag, new_score = _place_word(
             input_guess, col, row, place_direction, game.isPlayer1)
+        word_points = new_score - old_score
+        final_score = old_score + word_points * multiplier
+
         make_move(game.code, game.userid,
-                  json.dumps(new_board), new_rack, new_bag, new_score)
+                  json.dumps(new_board), new_rack, new_bag, final_score)
         input_guess   = ""
         selected_cell = None
         play_error    = ""
 
         if hit_cat and _board_screen is not None:
-            _launch_random_minigame(_board_screen)
+            _run_specific_minigame(_board_screen, minigame_name)
     except ValueError as e:
         play_error      = str(e)
         play_error_time = pg.time.get_ticks()
@@ -437,7 +450,9 @@ def draw_sidebar(screen, game):
                 LABEL_FONT.render("Your word:", True, BROWN).get_rect(midtop=(panel_cx, y)))
     y += LABEL_FONT.size("A")[1] + 6
     inp_rect = pg.Rect(panel_x, y, panel_w, int(height * 0.062))
-    _draw_card(screen, inp_rect, fill=WHITE, border=BROWN)
+    _error_active = bool(play_error and pg.time.get_ticks() - play_error_time < 1500)
+    _draw_card(screen, inp_rect, fill=(255, 235, 235) if _error_active else WHITE,
+               border=(220, 60, 60) if _error_active else BROWN)
     gs = INPUT_FONT.render(input_guess or "start typing...", True,
                            BLACK if input_guess else (180, 180, 180))
     screen.blit(gs, gs.get_rect(midleft=(inp_rect.x + 12, inp_rect.centery)))
@@ -473,12 +488,6 @@ def draw_sidebar(screen, game):
     ps = SCORE_FONT.render("Play Word", True, WHITE if ready else (130, 130, 130))
     screen.blit(ps, ps.get_rect(center=_btn_play_rect.center))
     y += _btn_play_rect.height + 14
-
-    # ── error / feedback ──────────────────────────────────────────────
-    if play_error and pg.time.get_ticks() - play_error_time < 3000:
-        es = LABEL_FONT.render(play_error, True, (200, 50, 50))
-        screen.blit(es, es.get_rect(midtop=(panel_cx, y)))
-        y += es.get_height() + 8
 
     # ── hint ──────────────────────────────────────────────────────────
     screen.blit(LABEL_FONT.render("Enter also submits", True, (160, 160, 160)),

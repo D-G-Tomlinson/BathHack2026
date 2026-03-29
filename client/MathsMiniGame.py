@@ -162,7 +162,10 @@ def start_screen():
 
         # Title
         title = fB.render("Scrabble Maths!", True, PURPLE)
-        screen.blit(title, (W // 2 - title.get_width() // 2, py(90)))
+        screen.blit(title, (W // 2 - title.get_width() // 2, py(60)))
+
+        bonus = fS.render("x5 SCORE BONUS!", True, LIME)
+        screen.blit(bonus, (W // 2 - bonus.get_width() // 2, py(140)))
 
         # Instructions card
         card_x, card_y, card_w, card_h = px(100), py(175), sx(600), sx(220)
