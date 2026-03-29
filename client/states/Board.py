@@ -248,6 +248,11 @@ def _do_play(game):
         word_points = new_score - old_score
         final_score = old_score + word_points * multiplier
 
+        # Run minigame BEFORE submitting the move so the opponent's turn
+        # doesn't start on the server until after this player finishes.
+        if hit_cat and _board_screen is not None:
+            _run_specific_minigame(_board_screen, minigame_name)
+
         make_move(game.code, game.userid,
                   json.dumps(new_board), json.dumps(new_rack), json.dumps(new_bag), final_score)
         # Update local state immediately so the rack redraws without waiting for the next poll
@@ -260,9 +265,6 @@ def _do_play(game):
         input_guess   = ""
         selected_cell = None
         play_error    = ""
-
-        if hit_cat and _board_screen is not None:
-            _run_specific_minigame(_board_screen, minigame_name)
     except ValueError as e:
         play_error      = str(e)
         play_error_time = pg.time.get_ticks()
