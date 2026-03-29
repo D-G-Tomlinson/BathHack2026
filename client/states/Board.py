@@ -20,7 +20,7 @@ BROWN = (184, 125,  75)
 SKY   = (174, 207, 223)
 MAUVE = (176, 123, 172)
 
-NUMBER_FONT = pg.font.SysFont("monospace", 12)
+NUMBER_FONT = pg.font.SysFont("comicsansms", 12)
 
 NUMBER_FONT2= pg.font.SysFont("comicsansms", 11)
 FONT        = pg.font.SysFont("comicsansms", 44)
@@ -127,6 +127,13 @@ _cat_cell_img = pg.transform.smoothscale(
     pg.image.load(os.path.join(_IMG_DIR, "Grey_cat.png")).convert_alpha(),
     (piece_width, piece_width)
 )
+
+# orange cat for the center 4 starting squares
+_center_cat_img = pg.transform.smoothscale(
+    pg.image.load(os.path.join(_IMG_DIR, "Orange_cat.png")).convert_alpha(),
+    (piece_width, piece_width)
+)
+CENTER_SQUARES = frozenset([(4, 4), (4, 5), (5, 4), (5, 5)])
 
 # (module_name, multiplier) — order determines random selection
 MINIGAME_LIST = [
@@ -242,7 +249,14 @@ def _do_play(game):
         final_score = old_score + word_points * multiplier
 
         make_move(game.code, game.userid,
-                  json.dumps(new_board), new_rack, new_bag, final_score)
+                  json.dumps(new_board), json.dumps(new_rack), json.dumps(new_bag), final_score)
+        # Update local state immediately so the rack redraws without waiting for the next poll
+        rack_key = "p1" if game.isPlayer1 else "p2"
+        score_idx = 0 if game.isPlayer1 else 1
+        server_state["board"] = new_board
+        server_state["pieces"][rack_key] = new_rack
+        server_state["pieces"]["bag"]    = new_bag
+        server_state["scores"][score_idx] = final_score
         input_guess   = ""
         selected_cell = None
         play_error    = ""
@@ -268,9 +282,13 @@ def update(game, events):
         last_time = now
         try:
             server_state = get_game(game.code)
-            # Server stores board as a JSON string after make_move — normalise to list
+            # Server may store board/rack/bag as JSON strings — normalise to lists
             if isinstance(server_state.get("board"), str):
                 server_state["board"] = json.loads(server_state["board"])
+            pieces = server_state.get("pieces", {})
+            for key in ("p1", "p2", "bag"):
+                if isinstance(pieces.get(key), str):
+                    pieces[key] = json.loads(pieces[key])
         except Exception:
             return   # keep showing last known state if network blips
         if server_state["cancelled"] != 0:
@@ -515,6 +533,8 @@ def draw_board(screen):
                 # highlight selected start cell
                 pg.draw.rect(screen, GOLD, pg.Rect(x, y, piece_width, piece_width))
                 pg.draw.rect(screen, BROWN, pg.Rect(x, y, piece_width, piece_width), 2)
+            elif (ri, ci) in CENTER_SQUARES:
+                screen.blit(_center_cat_img, (x, y))
             elif (ri, ci) in cat_squares:
                 screen.blit(_cat_cell_img, (x, y))
             x += piece_width
