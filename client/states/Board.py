@@ -1,5 +1,9 @@
 import pygame as pg
 from string import ascii_uppercase
+import math
+import os
+import json
+import random
 
 from backend_handler import get_game, make_move
 
@@ -10,20 +14,75 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
+# Palette
+GOLD  = (229, 178,  93)
+BROWN = (184, 125,  75)
+SKY   = (174, 207, 223)
+MAUVE = (176, 123, 172)
+
 NUMBER_FONT = pg.font.SysFont("monospace", 12)
 
-FONT = pg.font.SysFont("centurygothic", 48)
-BUTTON_FONT = pg.font.SysFont("centurygothic", 28)
-INPUT_FONT  = pg.font.SysFont("centurygothic", 32)
-TITLE_FONT = pg.font.SysFont("centurygothic",72)
-TIMER_FONT = pg.font.SysFont("centurygothic", 24)
+NUMBER_FONT2= pg.font.SysFont("comicsansms", 11)
+FONT        = pg.font.SysFont("comicsansms", 44)
+BUTTON_FONT = pg.font.SysFont("comicsansms", 26)
+INPUT_FONT  = pg.font.SysFont("comicsansms", 30)
+TITLE_FONT  = pg.font.SysFont("comicsansms", 64)
+SCORE_FONT  = pg.font.SysFont("comicsansms", 36)
+LABEL_FONT  = pg.font.SysFont("comicsansms", 26)
+WAIT_FONT   = pg.font.SysFont("comicsansms", 52)
+WAIT_SUB    = pg.font.SysFont("comicsansms", 30)
 
 info = pg.display.Info()
 (width, height) = info.current_w, info.current_h
 
 drag = None
+selected_cell   = None   # (col, row) clicked on board
+place_direction = "H"    # "H" or "V"
+play_error      = ""
+play_error_time = 0
 
-loading = pg.transform.scale(pg.image.load("Images/Cat_loading_screen.png"),(2.2*300, 300))
+# button rects set each frame by draw_sidebar so update() can hit-test them
+_btn_h_rect    = None
+_btn_v_rect    = None
+_btn_play_rect = None
+
+# ── circular-cropped waiting cat ──────────────────────────────────────
+_IMG_DIR   = os.path.join(os.path.dirname(__file__), "..", "Images", "Colours")
+_WAIT_R    = int(height * 0.14)
+_WAIT_D    = _WAIT_R * 2
+_WAIT_SPIN = _WAIT_R + int(height * 0.05)
+_WAIT_NDOT = 10
+_WAIT_DMAX = int(height * 0.013)
+
+def _make_circle_cat(path, d):
+    raw  = pg.image.load(path).convert_alpha()
+    cat  = pg.transform.smoothscale(raw, (d, d))
+    mask = pg.Surface((d, d), pg.SRCALPHA)
+    mask.fill((0, 0, 0, 0))
+    pg.draw.circle(mask, (255, 255, 255, 255), (d // 2, d // 2), d // 2)
+    cat.blit(mask, (0, 0), special_flags=pg.BLEND_RGBA_MULT)
+    return cat
+
+_wait_cat = _make_circle_cat(os.path.join(_IMG_DIR, "Grey_cat.png"), _WAIT_D)
+
+# small sidebar cat
+_side_cat_size = int(height * 0.18)
+def _load_cat(name, size):
+    img = pg.image.load(os.path.join(_IMG_DIR, name)).convert_alpha()
+    w, h = img.get_size()
+    scale = size / max(w, h)
+    return pg.transform.smoothscale(img, (int(w * scale), int(h * scale)))
+_side_cat = _load_cat("Tabby_cat.png", _side_cat_size)
+
+def _lerp_color(c1, c2, t):
+    return tuple(int(c1[i] + (c2[i] - c1[i]) * t) for i in range(3))
+
+def _draw_card(screen, rect, fill=WHITE, border=GOLD, radius=14, border_w=4):
+    pg.draw.rect(screen, fill,   rect, border_radius=radius)
+    pg.draw.rect(screen, border, rect, border_w, border_radius=radius)
+
+cat_squares: frozenset = frozenset()   # (row, col) pairs; set in init() from game.code seed
+_board_screen = None                   # captured each frame in draw() for minigame use
 
 server_state = None # {'board': [[None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None], [None, None, None, None, None, None, None, None, None, None]], 'cancelled': 0, 'pieces': {'bag': ['a', 'l', 'q', 'p', 'a', 'e', 'g', 'a', 'n', 'o', 'f', 'h', 'b', 'e', 'n', 't', 'e', 'k', 's', 'b', 'l', 'o', 'l', 'a', 'g', 'm', 'b', 'l', 'n', 'm', 'l', 'k', 'v', 'a', 'b', 'u', 'i', 'o', 'a', 'i', 'i', 'i', 'r', 'e', 'l', 'r', 'i', 's', 'e', 'e', 'u', 'o', 'y', 'c', 't', 'n', 'l', 'n', 'a', 'd', 's', 't', 't', 'd', 'k', 't', 's', 'l', 'd', 'l', 'i', 'c', 'z', 'e', 'r', 'e', 'p', 'e', 'f', 'j', 'o', 'o', 'h', 'i', 'd', 'n', 'n', 'y', 'a', 'v', 'e', 'e', 'r', 'i', 'r', 'u', 'o', 'e', 'w'], 'p1': ['r', 'a', 'u', 'l', 'x', 'g', 'o'], 'p2': ['t', 'i', 'a', 'w', 'n', 'a', 'l']}, 'player1Name': 'david', 'player1Next': True, 'player2Name': 'gabriel', 'scores': [0, 0]}
 last_time = pg.time.get_ticks()
@@ -63,22 +122,144 @@ input_guess = ""
 for c in letters:
     imgs[c] = pg.transform.scale(pg.image.load("Images/Alphabet/"+str(c).upper()+"_letter_tile.png"),(piece_width, piece_width))
 
-def try_entry(start,guess,direction):
-    print("make guess")
-    raise NotImplementedError
+# small cat icon drawn on empty cat squares on the board (piece_width now defined)
+_cat_cell_img = pg.transform.smoothscale(
+    pg.image.load(os.path.join(_IMG_DIR, "Grey_cat.png")).convert_alpha(),
+    (piece_width, piece_width)
+)
+
+def _launch_random_minigame(screen):
+    """Import a random minigame and run it via its run_gen generator until it exits."""
+    import sys
+    _client_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if _client_dir not in sys.path:
+        sys.path.insert(0, _client_dir)
+    import WordleMiniGame
+    import MathsMiniGame
+    import ConnectionsMiniGame
+    import SpellingMiniGame
+    import KaraokeMiniGame
+
+    minigames = [
+        WordleMiniGame.run_gen,
+        MathsMiniGame.run_gen,
+        ConnectionsMiniGame.run_gen,
+        SpellingMiniGame.run_gen,
+        KaraokeMiniGame.run_gen,
+    ]
+    clock = pg.time.Clock()
+    gen = random.choice(minigames)(screen, clock)
+    try:
+        next(gen)
+    except StopIteration:
+        return
+    while True:
+        events = pg.event.get()
+        for event in events:
+            if event.type == pg.QUIT:
+                return
+        try:
+            gen.send(events)
+        except StopIteration:
+            break
+        clock.tick(60)
+        pg.display.flip()
+
+
+def _place_word(word, col, row, direction, is_p1):
+    """Validate and apply a word placement. Returns (new_board, new_rack, new_bag, new_score) or raises ValueError."""
+    board = [list(r) for r in server_state["board"]]
+    rack  = list(server_state["pieces"]["p1" if is_p1 else "p2"])
+    bag   = list(server_state["pieces"]["bag"])
+    score = server_state["scores"][0 if is_p1 else 1]
+    word  = word.lower().strip()
+
+    if not word:
+        raise ValueError("No word typed!")
+
+    dc, dr = (1, 0) if direction == "H" else (0, 1)
+    c, r   = col, row
+
+    for letter in word:
+        if not (0 <= c < 10 and 0 <= r < 10):
+            raise ValueError("Word goes off the board!")
+        existing = board[r][c]
+        if existing is None:
+            if letter not in rack:
+                raise ValueError(f"You don't have the tile '{letter.upper()}'!")
+            rack.remove(letter)
+            board[r][c] = letter
+            score += points.get(letter, 0)
+        elif existing != letter:
+            raise ValueError(f"Conflicts with existing tile '{existing.upper()}' at ({c},{r})!")
+        c += dc
+        r += dr
+
+    # draw new tiles from bag
+    needed = 7 - len(rack)
+    rack  += bag[:needed]
+    bag    = bag[needed:]
+    return board, rack, bag, score
+
+
+def _do_play(game):
+    global input_guess, selected_cell, play_error, play_error_time
+    if not selected_cell:
+        play_error = "Click a start cell first!"
+        play_error_time = pg.time.get_ticks()
+        return
+    if not input_guess.strip():
+        play_error = "Type a word first!"
+        play_error_time = pg.time.get_ticks()
+        return
+    try:
+        col, row = selected_cell
+        # Check which new tiles would land on a cat square before placing
+        word = input_guess.lower().strip()
+        dc, dr = (1, 0) if place_direction == "H" else (0, 1)
+        c, r = col, row
+        hit_cat = False
+        for _ in word:
+            if 0 <= c < 10 and 0 <= r < 10:
+                if server_state["board"][r][c] is None and (r, c) in cat_squares:
+                    hit_cat = True
+            c += dc
+            r += dr
+
+        new_board, new_rack, new_bag, new_score = _place_word(
+            input_guess, col, row, place_direction, game.isPlayer1)
+        make_move(game.code, game.userid,
+                  json.dumps(new_board), new_rack, new_bag, new_score)
+        input_guess   = ""
+        selected_cell = None
+        play_error    = ""
+
+        if hit_cat and _board_screen is not None:
+            _launch_random_minigame(_board_screen)
+    except ValueError as e:
+        play_error      = str(e)
+        play_error_time = pg.time.get_ticks()
+    except Exception as e:
+        play_error      = f"Error: {e}"
+        play_error_time = pg.time.get_ticks()
+
 
 def update(game, events):
-    # for dev
+    global server_state, last_time, start_waiting
+    global input_guess, drag, selected_cell, place_direction
+    global play_error, play_error_time
+    global _btn_h_rect, _btn_v_rect, _btn_play_rect
 
-    global server_state
-    global last_time
-    global start_waiting
-    global input_guess
-    global drag
     now = pg.time.get_ticks()
     if now - last_time >= 1000 or server_state is None:
         last_time = now
-        server_state = get_game(game.code)
+        try:
+            server_state = get_game(game.code)
+            # Server stores board as a JSON string after make_move — normalise to list
+            if isinstance(server_state.get("board"), str):
+                server_state["board"] = json.loads(server_state["board"])
+        except Exception:
+            return   # keep showing last known state if network blips
         if server_state["cancelled"] != 0:
             game.end_state = server_state
             return "end"
@@ -86,27 +267,32 @@ def update(game, events):
             if start_waiting is None:
                 start_waiting = pg.time.get_ticks()
             return
-    # input
+        else:
+            start_waiting = None   # it's our turn again — hide overlay
+
     for event in events:
-        if event.type == pg.MOUSEBUTTONDOWN and board_rect.collidepoint(event.pos):
-            (x,y) = event.pos
-            x = (x-board_rect.left)//piece_width
-            y = (y-board_rect.top)//piece_width
-            drag = (x,y)
-        elif event.type == pg.MOUSEBUTTONUP and board_rect.collidepoint(event.pos):
-            (x,y) = event.pos
-            x = (x-board_rect.left)//piece_width
-            y = (y-board_rect.top)//piece_width
-            dx,dy = drag
-            drag = None
-            if x == dx and dy < y:
-                try_entry(start=(x,y),guess=input_guess,direction="down")
-            elif y == dy and dx < x:
-                try_entry(start=(x,y),guess=input_guess,direction="right")
+        if event.type == pg.MOUSEBUTTONDOWN:
+            pos = event.pos
+            # board cell click → select start
+            if board_rect.collidepoint(pos):
+                x = (pos[0] - board_rect.left) // piece_width
+                y = (pos[1] - board_rect.top)  // piece_width
+                selected_cell = (x, y)
+            # direction buttons
+            elif _btn_h_rect and _btn_h_rect.collidepoint(pos):
+                place_direction = "H"
+            elif _btn_v_rect and _btn_v_rect.collidepoint(pos):
+                place_direction = "V"
+            # play button
+            elif _btn_play_rect and _btn_play_rect.collidepoint(pos):
+                _do_play(game)
+
         elif event.type == pg.KEYDOWN:
             if event.key == pg.K_BACKSPACE:
                 input_guess = input_guess[:-1]
-            elif event.unicode and event.unicode.isprintable():
+            elif event.key == pg.K_RETURN:
+                _do_play(game)
+            elif event.unicode and event.unicode.isalpha():
                 input_guess += event.unicode
 
 
@@ -120,70 +306,208 @@ def draw_lines(screen):
     for x in range(rack_rect.left,rack_rect.right,piece_width):
         pg.draw.line(screen, BLACK, (x,rack_rect.top), (x,rack_rect.bottom))
 
-def draw_rack(screen,game):
+def draw_rack(screen, game):
     y = rack_rect.top
     x = rack_rect.left
-    if game.isPlayer1:
-        rack = server_state["pieces"]["p1"]
-    else:
-        rack = server_state["pieces"]["p2"]
-    for (count, img) in enumerate(rack):
-        draw_piece(screen,(x+count*piece_width,y),img)
+    rack = server_state["pieces"]["p1"] if game.isPlayer1 else server_state["pieces"]["p2"]
+    for count, img in enumerate(rack):
+        draw_piece(screen, (x + count * piece_width, y), img)
 
 def draw_loading(screen, start):
-    info = pg.display.Info()
-    (width, height) = info.current_w, info.current_h
+    t   = pg.time.get_ticks()
+    cx  = width  // 2
+    cy  = height // 2
 
-    all = pg.Surface((width, height))
-    all.set_alpha(100)
-    all.fill(WHITE)
-    screen.blit(all, (0, 0))
+    # semi-transparent SKY overlay
+    overlay = pg.Surface((width, height), pg.SRCALPHA)
+    overlay.fill((*SKY, 210))
+    screen.blit(overlay, (0, 0))
 
-    loading.get_rect().center = (width//2,height//2)
-    diff = (pg.time.get_ticks() - start)/150
-    new_image = pg.transform.rotate(loading.copy(), diff)
-    new_image.get_rect().center = (width//2,height//2)
-    screen.blit(new_image,(new_image.get_rect().left,new_image.get_rect().top))
-    text = TITLE_FONT.render("Waiting for other player ...", True, BLACK)
-    screen.blit(text,(0,0))
+    # card behind everything
+    card_w, card_h = int(width * 0.44), int(height * 0.58)
+    card = pg.Rect(0, 0, card_w, card_h)
+    card.center = (cx, cy)
+    pg.draw.rect(screen, WHITE, card, border_radius=24)
+    pg.draw.rect(screen, GOLD,  card, 5, border_radius=24)
+
+    # spinner ring
+    angle_off = (t / 900.0) * math.tau
+    for i in range(_WAIT_NDOT):
+        frac   = (i + 1) / _WAIT_NDOT
+        fade   = frac ** 1.6
+        angle  = angle_off + math.tau * i / _WAIT_NDOT
+        dx     = math.cos(angle) * _WAIT_SPIN
+        dy     = math.sin(angle) * _WAIT_SPIN
+        colour = _lerp_color(WHITE, MAUVE, fade)
+        r      = max(3, int(_WAIT_DMAX * (0.35 + 0.65 * fade)))
+        pg.draw.circle(screen, colour, (int(cx + dx), int(cy + int(height*0.04) + dy)), r)
+
+    # cat circle border
+    cat_cy = cy + int(height * 0.04)
+    pg.draw.circle(screen, GOLD,  (cx, cat_cy), _WAIT_R + 5)
+    pg.draw.circle(screen, BROWN, (cx, cat_cy), _WAIT_R + 5, 3)
+
+    # bouncing cat
+    bob = math.sin(t / 500.0) * int(height * 0.010)
+    rect = _wait_cat.get_rect(center=(cx, int(cat_cy + bob)))
+    screen.blit(_wait_cat, rect)
+
+    # title
+    title = WAIT_FONT.render("Opponent's turn!", True, MAUVE)
+    screen.blit(title, title.get_rect(midtop=(cx, card.top + 22)))
+
+    # animated dots
+    dot_count = int((t / 500) % 4)
+    dots = WAIT_SUB.render("Waiting" + "." * dot_count + " " * (3 - dot_count), True, BROWN)
+    screen.blit(dots, dots.get_rect(midbottom=(cx, card.bottom - 22)))
 
 def draw(game, screen):
-    pg.draw.rect(screen, (174, 207, 223), board_rect)
-    pg.draw.rect(screen, (174, 207, 223), rack_rect)
+    global _board_screen
+    _board_screen = screen
+    if server_state is None:
+        screen.fill(SKY)
+        return
+
+    # sky background
+    screen.fill(SKY)
+
+    # board background card
+    board_card = board_rect.inflate(16, 16)
+    _draw_card(screen, board_card, fill=GOLD, border=BROWN, radius=10)
+
+    pg.draw.rect(screen, SKY, board_rect)
     draw_lines(screen)
-    draw_rack(screen,game)
     draw_board(screen)
-    draw_scores(screen,game.isPlayer1)
-    draw_input(screen)
+
+    # rack card
+    rack_card = rack_rect.inflate(16, 14)
+    _draw_card(screen, rack_card, fill=GOLD, border=BROWN, radius=10)
+    draw_rack(screen, game)
+
+    draw_sidebar(screen, game)
+
     global start_waiting
     if start_waiting is not None:
         draw_loading(screen, start_waiting)
 
+
+def draw_sidebar(screen, game):
+    global _btn_h_rect, _btn_v_rect, _btn_play_rect
+
+    panel_x  = board_rect.right + 40
+    panel_w  = width - panel_x - 30
+    panel_cx = panel_x + panel_w // 2
+    y        = 40
+
+    # ── score cards ───────────────────────────────────────────────────
+    p1_name    = "You" if game.isPlayer1 else (server_state["player1Name"] or "Player 1")
+    p2_name    = "You" if not game.isPlayer1 else (server_state["player2Name"] or "Player 2")
+    scores     = server_state["scores"]
+    is_p1_turn = server_state["player1Next"]
+    my_turn    = (game.isPlayer1 == is_p1_turn)
+
+    card_h = int(height * 0.12)
+    for i, (name, score) in enumerate([(p1_name, scores[0]), (p2_name, scores[1])]):
+        card = pg.Rect(panel_x, y, panel_w, card_h)
+        active  = (i == 0 and is_p1_turn) or (i == 1 and not is_p1_turn)
+        fill    = MAUVE if active else WHITE
+        border  = BROWN if active else GOLD
+        tc      = WHITE if active else BLACK
+        _draw_card(screen, card, fill=fill, border=border)
+        screen.blit(SCORE_FONT.render(name, True, tc),
+                    SCORE_FONT.render(name, True, tc).get_rect(topleft=(card.x+14, card.y+8)))
+        sc = TITLE_FONT.render(str(score), True, tc)
+        screen.blit(sc, sc.get_rect(bottomright=(card.right-14, card.bottom-6)))
+        y += card_h + 14
+
+    # ── turn label ────────────────────────────────────────────────────
+    y += 6
+    turn_surf = SCORE_FONT.render("Your turn!" if my_turn else "Opponent's turn...",
+                                  True, BROWN if my_turn else MAUVE)
+    screen.blit(turn_surf, turn_surf.get_rect(midtop=(panel_cx, y)))
+    y += turn_surf.get_height() + 28
+
+    if not my_turn:
+        # nothing interactive to show
+        screen.blit(_side_cat, _side_cat.get_rect(midbottom=(panel_cx, height - int(height*0.05))))
+        return
+
+    # ── word input ────────────────────────────────────────────────────
+    screen.blit(LABEL_FONT.render("Your word:", True, BROWN),
+                LABEL_FONT.render("Your word:", True, BROWN).get_rect(midtop=(panel_cx, y)))
+    y += LABEL_FONT.size("A")[1] + 6
+    inp_rect = pg.Rect(panel_x, y, panel_w, int(height * 0.062))
+    _draw_card(screen, inp_rect, fill=WHITE, border=BROWN)
+    gs = INPUT_FONT.render(input_guess or "start typing...", True,
+                           BLACK if input_guess else (180, 180, 180))
+    screen.blit(gs, gs.get_rect(midleft=(inp_rect.x + 12, inp_rect.centery)))
+    y += inp_rect.height + 20
+
+    # ── start cell ────────────────────────────────────────────────────
+    cell_lbl = f"Start cell: ({selected_cell[0]},{selected_cell[1]})" if selected_cell else "Click board to pick start"
+    cell_col = BLACK if selected_cell else (150, 150, 150)
+    cs = LABEL_FONT.render(cell_lbl, True, cell_col)
+    screen.blit(cs, cs.get_rect(midtop=(panel_cx, y)))
+    y += cs.get_height() + 16
+
+    # ── H / V direction buttons ───────────────────────────────────────
+    btn_w = int(panel_w * 0.42)
+    btn_h = int(height * 0.058)
+    _btn_h_rect = pg.Rect(panel_x, y, btn_w, btn_h)
+    _btn_v_rect = pg.Rect(panel_x + panel_w - btn_w, y, btn_w, btn_h)
+    for rect, label, active in ((_btn_h_rect, "Across", place_direction == "H"),
+                                 (_btn_v_rect, "Down",   place_direction == "V")):
+        _draw_card(screen, rect,
+                   fill=GOLD if active else WHITE,
+                   border=BROWN, radius=10)
+        ls = LABEL_FONT.render(label, True, BLACK)
+        screen.blit(ls, ls.get_rect(center=rect.center))
+    y += btn_h + 20
+
+    # ── play button ───────────────────────────────────────────────────
+    _btn_play_rect = pg.Rect(panel_x, y, panel_w, int(height * 0.075))
+    ready = bool(input_guess.strip() and selected_cell)
+    _draw_card(screen, _btn_play_rect,
+               fill=MAUVE if ready else (200, 200, 200),
+               border=BROWN, radius=12)
+    ps = SCORE_FONT.render("Play Word", True, WHITE if ready else (130, 130, 130))
+    screen.blit(ps, ps.get_rect(center=_btn_play_rect.center))
+    y += _btn_play_rect.height + 14
+
+    # ── error / feedback ──────────────────────────────────────────────
+    if play_error and pg.time.get_ticks() - play_error_time < 3000:
+        es = LABEL_FONT.render(play_error, True, (200, 50, 50))
+        screen.blit(es, es.get_rect(midtop=(panel_cx, y)))
+        y += es.get_height() + 8
+
+    # ── hint ──────────────────────────────────────────────────────────
+    screen.blit(LABEL_FONT.render("Enter also submits", True, (160, 160, 160)),
+                LABEL_FONT.render("Enter also submits", True, (160, 160, 160)).get_rect(midtop=(panel_cx, y)))
+
+    # ── deco cat ──────────────────────────────────────────────────────
+    screen.blit(_side_cat, _side_cat.get_rect(midbottom=(panel_cx, height - int(height*0.05))))
+
+
 def draw_input(screen):
-    global input_guess
-    pg.draw.rect(screen, WHITE, input_box, 0)
+    pass   # handled inside draw_sidebar
 
-    guess_surface = INPUT_FONT.render(input_guess, True, BLACK)
-    screen.blit(guess_surface,
-                (input_box.x + 5, input_box.y + (input_box.height - guess_surface.get_height()) // 2))
-
-    #
 
 def draw_scores(screen, isP1):
-    n1 = ("You" if isP1 else server_state["player1Name"])+": "
-    n2 = ("You: " if not isP1 else server_state["player2Name"])+": "
-    text = FONT.render(n1 + str(server_state["scores"][0])+", "+n2 + str(server_state["scores"][1]), True, WHITE)
-    screen.blit(text,(0,0))
+    pass   # handled inside draw_sidebar
 
 def draw_board(screen):
-    # do special pieces
-
-    x,y = board_rect.topleft
-    for row in server_state["board"]:
+    x, y = board_rect.topleft
+    for ri, row in enumerate(server_state["board"]):
         x = board_rect.left
-        for piece in row:
+        for ci, piece in enumerate(row):
             if piece is not None:
-                draw_piece(screen,(x,y),piece)
+                draw_piece(screen, (x, y), piece)
+            elif selected_cell == (ci, ri):
+                # highlight selected start cell
+                pg.draw.rect(screen, GOLD, pg.Rect(x, y, piece_width, piece_width))
+                pg.draw.rect(screen, BROWN, pg.Rect(x, y, piece_width, piece_width), 2)
+            elif (ri, ci) in cat_squares:
+                screen.blit(_cat_cell_img, (x, y))
             x += piece_width
         y += piece_width
 
@@ -200,7 +524,16 @@ def draw_piece(screen, pos,letter):
     screen.blit(point_text, (x+piece_width//2, y+piece_width//2))
 
 def init(game):
-    global start_waiting
+    global start_waiting, selected_cell, input_guess, play_error, server_state, cat_squares
     start_waiting = None
+    selected_cell = None
+    input_guess   = ""
+    play_error    = ""
+    server_state  = None   # force a fresh fetch on entry
+    # Deterministic permutation from game code: 10 cats, unique row AND col
+    rng = random.Random(game.code)
+    cols = list(range(10))
+    rng.shuffle(cols)
+    cat_squares = frozenset((row, cols[row]) for row in range(10))
 
 functions = (update,draw,init)

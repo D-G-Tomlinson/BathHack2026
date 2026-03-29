@@ -22,9 +22,9 @@ GREY = (180, 160, 140)
 CREAM = (250, 243, 220)
 
 CAT_FILES = [
-    os.path.join(ASSETS, "Images", "Brown Cat.png"),
-    os.path.join(ASSETS, "Images", "White cat.png"),
-    os.path.join(ASSETS, "Images", "Grey cat.png"),
+    os.path.join(ASSETS, "Images", "Colours", "Brown_cat.png"),
+    os.path.join(ASSETS, "Images", "Colours", "White_cat.png"),
+    os.path.join(ASSETS, "Images", "Colours", "Grey_cat.png"),
 ]
 
 WORDS = [

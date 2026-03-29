@@ -4,11 +4,11 @@ import sys
 import traceback
 import time
 
-
 pg.init()
 pg.mixer.init()
 
-WIDTH, HEIGHT = 700, 360
+_info = pg.display.Info()
+WIDTH, HEIGHT = _info.current_w, _info.current_h  # native resolution — no scaling
 
 class GameState:
     def __init__(self):
@@ -21,7 +21,7 @@ class GameState:
         self.userid = userid
 gameState = GameState()
 
-screen = pg.display.set_mode((WIDTH, HEIGHT), pg.FULLSCREEN | pg.SCALED)
+screen = pg.display.set_mode((WIDTH, HEIGHT), pg.FULLSCREEN)
 
 import states.MainMenu as MM
 import states.NewGame as NG

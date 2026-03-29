@@ -54,7 +54,7 @@ TOTAL_QUESTIONS = 5
 SPOTS = [px(133), px(310), px(487), px(664)]
 ANS_Y = py(490)
 
-IMG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Images")
+IMG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Images", "Colours")
 
 def _cat(name, h):
     img = pygame.image.load(os.path.join(IMG_DIR, name)).convert_alpha()
@@ -62,20 +62,20 @@ def _cat(name, h):
     return pygame.transform.smoothscale(img, (w, h))
 
 # large flanking cats for start screen
-cat_orange   = _cat("Orange Cat.png",         sx(115))
-cat_tabby    = _cat("Tabby cat.png",           sx(115))
+cat_orange   = _cat("Orange_cat.png",         sx(115))
+cat_tabby    = _cat("Tabby_cat.png",           sx(115))
 # sleeping cat for end screen
-cat_sleeping = _cat("Sleeping Tabby Cat.png", sx(100))
+cat_sleeping = _cat("Sleeping_tabby_cat.png", sx(100))
 # small cats for game screen side margins
-cat_grey_sm  = _cat("Grey cat.png",            sx(85))
-cat_black_sm = _cat("Black cat.png",           sx(85))
+cat_grey_sm  = _cat("Grey_cat.png",            sx(85))
+cat_black_sm = _cat("Black_cat.png",           sx(85))
 # bottom row of cats for start screen
 cat_row = [
-    _cat("Orange Cat.png",  sx(88)),
-    _cat("Grey cat.png",     sx(88)),
-    _cat("Black cat.png",    sx(88)),
-    _cat("Brown Cat.png",    sx(88)),
-    _cat("White cat.png",    sx(88)),
+    _cat("Orange_cat.png",  sx(88)),
+    _cat("Grey_cat.png",     sx(88)),
+    _cat("Black_cat.png",    sx(88)),
+    _cat("Brown_cat.png",    sx(88)),
+    _cat("White_cat.png",    sx(88)),
 ]
 
 

@@ -34,10 +34,10 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _CAT_SIZE = 240  # pixel size to render each corner cat
 
 _CAT_FILES = [
-    ("Images/Brown cat.png",  "topleft"),
-    ("Images/Grey cat.png",   "topright"),
-    ("Images/Orange cat.png", "bottomleft"),
-    ("Images/White cat.png",  "bottomright"),
+    ("Images/Colours/Brown_cat.png",  "topleft"),
+    ("Images/Colours/Grey_cat.png",   "topright"),
+    ("Images/Colours/Orange_cat.png", "bottomleft"),
+    ("Images/Colours/White_cat.png",  "bottomright"),
 ]
 
 

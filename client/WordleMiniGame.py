@@ -64,7 +64,7 @@ font_key   = pygame.font.SysFont("Comic Sans MS", sx(18), bold=True)
 font_msg   = pygame.font.SysFont("Comic Sans MS", sx(26), bold=True)
 font_title = pygame.font.SysFont("Comic Sans MS", sx(42), bold=True)
 
-IMG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Images")
+IMG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Images", "Colours")
 
 def _cat(name, h):
     img = pygame.image.load(os.path.join(IMG_DIR, name)).convert_alpha()
@@ -72,16 +72,16 @@ def _cat(name, h):
     return pygame.transform.smoothscale(img, (w, h))
 
 # centred decoration above the instructions card
-cat_deco     = _cat("Orange Cat.png",         sx(90))
-cat_sleeping = _cat("Sleeping Tabby Cat.png", sx(85))
+cat_deco     = _cat("Orange_cat.png",         sx(90))
+cat_sleeping = _cat("Sleeping_tabby_cat.png", sx(85))
 # side cats for the game screen margins
-cat_grey_sm  = _cat("Grey cat.png",            sx(85))
-cat_black_sm = _cat("Black cat.png",           sx(85))
+cat_grey_sm  = _cat("Grey_cat.png",            sx(85))
+cat_black_sm = _cat("Black_cat.png",           sx(85))
 # bottom row (3 cats fits the narrow layout)
 cat_row = [
-    _cat("Tabby cat.png",  sx(88)),
-    _cat("Brown Cat.png",  sx(88)),
-    _cat("White cat.png",  sx(88)),
+    _cat("Tabby_cat.png",  sx(88)),
+    _cat("Brown_cat.png",  sx(88)),
+    _cat("White_cat.png",  sx(88)),
 ]
 
 
